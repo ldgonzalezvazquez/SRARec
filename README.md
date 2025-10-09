@@ -20,4 +20,3 @@ The results with SRARec, although not exactly identical, were located near the r
 
 Real-world data analysis (SARS-CoV-2 and HIV-1)
 We downloaded the identifiers for all NCBI SARS-CoV-2 and HIV-1 SRA entries as of September 2, 2025 [update at the end with our HIV-1 results]. We ran the analysis in parallel at the Galician Supercomputing Center (CESGA) with default parameters and in "slow" mode (see above). We obtained results on 500,000 SARS-CoV-2 SRAs and 1,700 HIV-1 SRAs.
-<img width="442" height="639" alt="image" src="https://github.com/user-attachments/assets/4a62b1d0-5e34-49a4-a6bd-797cb0b75d85" />
