@@ -26,12 +26,16 @@ Graphic explanation:
 <img width="842" height="595" alt="Graphs" src="https://github.com/user-attachments/assets/26861375-d7d5-43e1-8bcc-24a101dc6bbb" />
 
 ----
-For any sample × region (gene/NSP/protein), contributions are summed separately for four-gamete-positive (T) and non-positive (F) evidence, and a region-level recombination score is computed as ρ = T / (T + F). The same T/(T+F) ratio is computed genome-wide at nucleotide resolution to produce a positional profile. The self-contained interactive HTML renders heatmaps of log10(ρ) by genes and by proteins/NSPs, and a genome-wide positional track of ρ built directly from these per-sample records.
+For any sample × region (gene/NSP/protein), A recombination ratio ρ = T/(T+F) is computed genome-wide at nucleotide resolution to produce a positional profile. The self-contained interactive HTML renders heatmaps of log10(ρ) by genes and by proteins/NSPs means, and a genome-wide positional track of ρ.
 
 (See HTML for graphs and partial results)
 
+**References** (Exclusive for CoViE):
+- Danecek P, Bonfield JK, Liddle J, Marshall J, Ohan V, Pollard MO, Whitwham A, Keane T, McCarthy SA, Davies RM, Li H. Twelve years of SAMtools and BCFtools. GigaScience. 2021 Feb 16;10(2):giab008. doi: 10.1093/gigascience/giab008. PMID: 33590861; PMCID: PMC7931819.
+- Hudson RR, Kaplan NL. Statistical properties of the number of recombination events in the history of a sample of DNA sequences. Genetics. 1985 Aug;111(1):147–64. doi: 10.1093/genetics/111.1.147. PMID: 4029609; PMCID: PMC1202594.
+
 -----
-----
+-----
 Implementations for HIV-1 study:
 Figure adapted from: https://github.com/ChrisHIV/shiver?tab=readme-ov-file
 
