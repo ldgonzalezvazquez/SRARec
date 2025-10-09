@@ -1,5 +1,4 @@
 # SRARec – Methods
----
 
 **For CoViE study analyses move to the [Exclusive_CoViE](https://github.com/ldgonzalezvazquez/SRARec/tree/Exclusive_CoViE) branch.** 
 ---
