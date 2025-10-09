@@ -1,5 +1,6 @@
 # SRARec – Methods
 ---
+
 **For CoViE study analyses move to the [Exclusive_CoViE](https://github.com/ldgonzalezvazquez/SRARec/tree/Exclusive_CoViE) branch.** 
 ---
 SRARec is developed in Python 3 and distributed as open-source software (MIT License). The source code, along with detailed documentation and the graphical interface, is available in the authors' GitHub repository (link; version 1.1.1 in the publication) for free use and adaptation. Internally, SRARec integrates several proven sequence alignment and processing tools.
