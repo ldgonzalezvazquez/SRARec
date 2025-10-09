@@ -41,6 +41,7 @@ Figure adapted from Shiver [GitHub](https://github.com/ChrisHIV/shiver?tab=readm
 
 <img width="842" height="595" alt="HIV-1meth" src="https://github.com/user-attachments/assets/69fe8957-f261-448e-8a36-fa2293351d32" />
 
+---
 **To do´s:**
 - [ ] Create a script that modifies the results of the adapted version of SRARec with reference-guided de novo assembly so that the results of all samples can be extrapolated to the same reference.
 - [ ] Continue with HIV-1 analysis
