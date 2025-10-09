@@ -43,5 +43,6 @@ Figure adapted from Shiver [GitHub](https://github.com/ChrisHIV/shiver?tab=readm
 
 ---
 **To do´s:**
+- [ ]  Review the text and write Word with this methodology for people who do not have GitHub and cannot access private repositories.
 - [ ] Create a script that modifies the results of the adapted version of SRARec with reference-guided de novo assembly so that the results of all samples can be extrapolated to the same reference.
 - [ ] Continue with HIV-1 analysis
