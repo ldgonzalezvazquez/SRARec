@@ -29,9 +29,9 @@ Partial results [until August 8, 2025 - ≈350,000 SRAs]:
 
 Final results [December 12, 2025 - ≈600,000 SC2 SRAs & ≈ 5,000 HIV-1 SRAs from Ravi Paper]:
 
-[SC2]([https://github.com/ldgonzalezvazquez/SRARec/SC2_20251214_224201.html](https://github.com/ldgonzalezvazquez/SRARec/blob/main/SC2_20251214_224201.html))
+[SC2](https://github.com/ldgonzalezvazquez/SRARec/blob/main/SC2_20251214_224201.html))
 
-[HIV-1]([https://github.com/ldgonzalezvazquez/SRARec/HIV-1_20251212_163459.html](https://github.com/ldgonzalezvazquez/SRARec/blob/main/HIV-1_20251212_163459.html))
+[HIV-1](https://github.com/ldgonzalezvazquez/SRARec/blob/main/HIV-1_20251212_163459.html)
 
 **To do´s:**
 - [ ] Make the red line less opaque in HTMLs
