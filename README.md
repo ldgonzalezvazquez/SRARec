@@ -26,3 +26,6 @@ We downloaded the identifiers for all NCBI SARS-CoV-2 and HIV-1 SRA entries as o
 
 Partial results [until August 8, 2025 - ≈350,000 SRAs]:
 <img width="990" height="550" alt="Partial_res_18Ago" src="https://github.com/user-attachments/assets/431c1083-6629-4817-876f-233fb5c02741" />
+
+**To do´s:**
+- [ ] Make the red line less opaque in HTMLs
