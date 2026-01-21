@@ -28,7 +28,7 @@ Graphic explanation:
 ----
 For any sample × region (gene/NSP/protein), A recombination ratio ρ = T/(T+F) is computed genome-wide at nucleotide resolution to produce a positional profile. The self-contained interactive HTML renders heatmaps of log10(ρ) by genes and by proteins/NSPs means, and a genome-wide positional track of ρ.
 
-(See [HTML](https://github.com/ldgonzalezvazquez/SRARec/blob/Exclusive_CoViE/Recombination__partial_9oct25.html) for graphs and partial results)
+(See [HTML](https://github.com/ldgonzalezvazquez/SRARec/blob/Exclusive_CoViE/Recombination__partial_9oct25.html) or [HTML_immunolocationfilters](https://github.com/ldgonzalezvazquez/SRARec/blob/Exclusive_CoViE/Recombination__partial_21ene26_immunolocationfilters.html) for graphs and partial results – [HTML_immunolocationfilters](https://github.com/ldgonzalezvazquez/SRARec/blob/Exclusive_CoViE/Recombination__partial_21ene26_immunolocationfilters.html) was executed with trimmed .bams, so the results are partially different but also more reliable; 20 time points are missing as they are still running)
 
 **References** (Exclusive for CoViE):
 - Danecek P, Bonfield JK, Liddle J, Marshall J, Ohan V, Pollard MO, Whitwham A, Keane T, McCarthy SA, Davies RM, Li H. Twelve years of SAMtools and BCFtools. GigaScience. 2021 Feb 16;10(2):giab008. doi: 10.1093/gigascience/giab008. PMID: 33590861; PMCID: PMC7931819.
