@@ -3,24 +3,10 @@
 SRARec_RecombinationHTML
 ------------------------
 
-Módulo ligero para generar un HTML interactivo con la tasa de recombinación
-a lo largo del genoma (perfil global) a partir de un results_txt de SRARec.
-
-Pensado para ser llamado desde la GUI, sin dependencias raras:
-- Usa únicamente: pandas, numpy, plotly.
-- No define callbacks ni popups personalizados; sólo zoom/pan/hover nativos.
-
-Ejemplo de uso desde la GUI:
-
-    from SRARec_RecombinationHTML import generate_recombination_html
-    import webbrowser, os
-
-    html_path = generate_recombination_html("results_ravi.txt")
-    webbrowser.open(f"file://{os.path.abspath(html_path)}")
-
-Soporta dos formatos de entrada:
-1) Tabla de eventos plana con columnas: pA, pB, true
-2) Tabla "SRARec" con columnas Rec / No_Rec (strings codificando pares)
+CÓDIGO EN EL QUE TODAVÍA NO SE HA REVISADO LA OPCIÓN --exclusive-positions 
+-> las posiciones solapadas en los resultados dentro de un mismo paciente se unifican al valor 
+máximo que toma esa posición en el rango más pequeño (que por tanto le da un valor más alto).
+Primando siempre el True sobre el False.
 """
 
 import os
