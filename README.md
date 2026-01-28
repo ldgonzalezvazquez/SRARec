@@ -46,7 +46,7 @@ Main calculation
 - Invalid events are filtered (pB <= pA) and pA/pB are coerced to numeric.
 - Each event contributes a weight w = 1/(pB - pA) over the range [pA, pB).
 - True/false contributions are separated and rho per position is computed as:
-  rho(i) = alpha * true(i) / (true(i) + false(i)) when events exist.
+  rho(i) = alpha * true / (true + false) when events exist.
 - If SRA is present at the start of each line, the script aggregates by patient
   automatically; it can also enforce exclusive positions so true and false do
   not co-occur at the same position.
