@@ -31,7 +31,42 @@ Final results [December 12, 2025 - ≈600,000 SC2 SRAs & ≈ 5,000 HIV-1 SRAs fr
 
 [SC2](https://github.com/ldgonzalezvazquez/SRARec/blob/main/SC2_20251214_224201.html)
 
+
 [HIV-1](https://github.com/ldgonzalezvazquez/SRARec/blob/main/HIV-1_20251212_163459.html)
+
+# [generate_graphs.py](https://github.com/ldgonzalezvazquez/SRARec/blob/main/generate_graphs.py)
+
+This script generates recombination profiles along the genome and interactive
+figures (HTML) plus optional PNGs. It reads SRARec-style results (lines with
+Sra:, Rec:, No_Rec:, BegFin_Reads:) or tables with pA/pB/true or Rec/No_Rec
+columns.
+
+Main calculation
+- Events (pA, pB) are extracted from Rec (true=1) and No_Rec (true=0).
+- Invalid events are filtered (pB <= pA) and pA/pB are coerced to numeric.
+- Each event contributes a weight w = 1/(pB - pA) over the range [pA, pB).
+- True/false contributions are separated and rho per position is computed as:
+  rho(i) = alpha * true(i) / (true(i) + false(i)) when events exist.
+- If SRA is present at the start of each line, the script aggregates by patient
+  automatically; it can also enforce exclusive positions so true and false do
+  not co-occur at the same position.
+
+Auxiliary curves from BegFin_Reads
+- Coverage: counts how many reads cover each position using a difference array
+  and cumulative sum (range coverage).
+- Begfin concentration: counts read starts and ends, adding only at start and
+  end of each read (start/end density).
+
+Main CLI arguments
+--results PATH              input results file
+--annotation PATH           GenBank or GFF for gene track (optional)
+--genome-len INT            genome length (if not inferred)
+--alpha FLOAT               rho scale factor
+--exclusive-positions       true and false cannot overlap at a position
+--aggregate-by-patient      aggregate per SRA before summing
+--no-coverage               skip coverage curve
+--no-begfin-concentration   skip begfin concentration curve
+--output-dir PATH           output folder for figures/files
 
 **To do´s:**
 - [ ] Make the red line less opaque in HTMLs
