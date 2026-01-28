@@ -56,14 +56,14 @@ Auxiliary curves from BegFin_Reads
   and cumulative sum (range coverage).
 - Begfin concentration: counts read starts and ends, adding only at start and
   end of each read (start/end density).
+### Main CLI arguments
 
-Main CLI arguments
---results PATH              input results file
---annotation PATH           GenBank or GFF for gene track (optional)
---genome-len INT            genome length (if not inferred)
---alpha FLOAT               rho scale factor
---exclusive-positions       true and false cannot overlap at a position
---aggregate-by-patient      aggregate per SRA before summing
---no-coverage               skip coverage curve
---no-begfin-concentration   skip begfin concentration curve
---output-dir PATH           output folder for figures/files
+- `--results PATH` — input results file  
+- `--annotation PATH` — GenBank or GFF for gene track (optional)  
+- `--genome-len INT` — genome length (if not inferred)  
+- `--alpha FLOAT` — rho scale factor  
+- `--exclusive-positions` — true and false cannot overlap at a position  
+- `--aggregate-by-patient` — aggregate per SRA before summing  
+- `--no-coverage` — skip coverage curve  
+- `--no-begfin-concentration` — skip begfin concentration curve  
+- `--output-dir PATH` — output folder for figures/files  
