@@ -67,6 +67,3 @@ Main CLI arguments
 --no-coverage               skip coverage curve
 --no-begfin-concentration   skip begfin concentration curve
 --output-dir PATH           output folder for figures/files
-
-**To do´s:**
-- [ ] Make the red line less opaque in HTMLs
