@@ -1,4 +1,3 @@
-Lo he reestructurado como README de GitHub, manteniendo solo lo que aparece en tu texto y dejando placeholders donde faltan enlaces reales del repositorio, DOI, Zenodo o publicación. La información base viene del README/methods que subiste, incluyendo modos de ejecución, plataformas compatibles, GUI, validación, análisis reales y `generate_graphs.py` . También añadí enlaces oficiales para herramientas externas como Cutadapt, BWA, minimap2, SAMtools, SRA Toolkit, Picard, BBMap/BBTools y NGSNGS. ([cutadapt.readthedocs.io][1])
 
 ````markdown
 # SRARec
