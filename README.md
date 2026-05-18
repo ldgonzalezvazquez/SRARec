@@ -925,9 +925,7 @@ SRARec/
 If you use SRARec, please cite:
 
 ```text
-Iglesias-Rivas P, González-Vázquez LD, Arenas M.
-SRARec: read-level detection of recombination signals from SRA and local sequencing data.
-Version 1.1.1.
+Luis Daniel González-Vázquez, Paula Iglesias-Rivas, ???, Miguel Arenas, ??? and Darren P. Martin
 [Journal / preprint / DOI to be added]
 ```
 
@@ -993,7 +991,6 @@ For questions, bug reports or feature requests, please open an issue in the repo
 Maintainers:
 
 ```text
-Paula Iglesias-Rivas
 Luis Daniel González-Vázquez
-Miguel Arenas
+xxxx
 ```
