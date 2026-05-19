@@ -48,7 +48,6 @@ It supports **Illumina**, **Oxford Nanopore Technologies (ONT)** and **PacBio** 
 - [Validation](#validation)
 - [Large-scale analyses](#large-scale-analyses)
 - [Limitations](#limitations)
-- [Recommended repository structure](#recommended-repository-structure)
 - [Citation](#citation)
 - [License](#license)
 - [References and external tools](#references-and-external-tools)
@@ -1095,21 +1094,9 @@ slow mode
 
 | Dataset | Status/date | Approximate size |
 |---|---:|---:|
-| SARS-CoV-2 partial analysis | 2025-08-18 | ~350,000 SRAs |
 | SARS-CoV-2 final analysis | 2025-12-12 | ~600,000 SRAs |
 | HIV-1 final analysis | 2025-12-12 | ~5,000 SRAs |
-| Earlier HIV-1 analysis record | draft note | ~1,700 SRAs |
 
-> Update this table before release if the final number of analysed SRAs changes.
-
-### Result folders
-
-```text
-results/
-├── Partial_res_18Ago/
-├── SC2/
-└── HIV-1/
-```
 
 ---
 
@@ -1137,50 +1124,12 @@ Therefore, SRARec results should be interpreted as evidence of read-level incomp
 
 ---
 
-## Recommended repository structure
-
-```text
-SRARec/
-├── README.md
-├── LICENSE
-├── requirements.txt
-├── environment.yml
-├── SRARec1.2.py
-├── scripts/
-│   └── generate_graphs.py
-├── SARS_CoV-2/
-│   └── NC_045512.2.fna
-├── HIV-1/
-│   └── NC_001802.1.fasta
-├── annotations/
-│   ├── NC_045512.2.gb
-│   └── NC_001802.1.gb
-├── examples/
-│   ├── local_fastq/
-│   ├── local_bam/
-│   └── sra_accession/
-├── docs/
-│   ├── installation.md
-│   ├── usage.md
-│   ├── gui.md
-│   ├── outputs.md
-│   └── validation.md
-├── software/
-│   ├── shiver/
-│   └── SPAdes-4.2.0-Linux/
-└── tests/
-```
-
-> Update this tree if the final repository structure differs from the release layout.
-
----
-
 ## Citation
 
 If you use SRARec, please cite:
 
 ```text
-González-Vázquez LD, Iglesias-Rivas P, Martin DP, Arenas M.
+González-Vázquez LD, Iglesias-Rivas P,  Arenas , Martin DP. ???
 SRARec: read-level detection of recombination signals from SRA and local sequencing data.
 Version 1.2.
 [Journal / preprint / DOI to be added]
@@ -1191,7 +1140,7 @@ BibTeX placeholder:
 ```bibtex
 @software{SRARec,
   title        = {SRARec: read-level detection of recombination signals from SRA and local sequencing data},
-  author       = {Iglesias-Rivas, Paula and González-Vázquez, Luis Daniel and Martin, Darren P. and Arenas, Miguel},
+  author       = {Iglesias-Rivas, Paula and González-Vázquez, Luis Daniel and Martin, Arenas, Miguel and Darren P.},
   year         = {2026},
   version      = {1.2},
   license      = {MIT}
@@ -1255,7 +1204,7 @@ Maintainers/contributors listed in the project materials:
 
 ```text
 Luis Daniel González-Vázquez
-Darren P. Martin
 Paula Iglesias-Rivas
 Miguel Arenas
+Darren P. Martin
 ```
