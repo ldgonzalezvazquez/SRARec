@@ -192,7 +192,7 @@ Some tools, especially **BBMap/BBTools**, **SHIVER**, **NGSNGS** and some **rnav
 Check that SRARec is available:
 
 ```bash
-python3 SRARec.py --help
+python3 SRARec1.2.py --help
 ```
 
 Check the main external tools:
@@ -211,7 +211,7 @@ picard --version
 rnaviralspades.py --help
 ```
 
-> Replace `SRARec.py` with the actual script name if your repository uses a versioned file such as `SRARec1.2.py`.
+> Replace `SRARec1.2.py` with the actual script name if your repository uses a versioned file such as `SRARec1.2.py`.
 
 ---
 
@@ -247,13 +247,13 @@ SARS_CoV-2/NC_045512.2.fna
 Example:
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX --slow
+python3 SRARec1.2.py SRRXXXXXXXX --slow
 ```
 
 #### Built-in HIV-1 reference
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX \
+python3 SRARec1.2.py SRRXXXXXXXX \
   --slow \
   --virus hiv
 ```
@@ -263,7 +263,7 @@ python3 SRARec.py SRRXXXXXXXX \
 First, create or overwrite the custom reference index:
 
 ```bash
-python3 SRARec.py \
+python3 SRARec1.2.py \
   --index_only \
   --custom_ref path/to/custom_reference.fasta
 ```
@@ -271,7 +271,7 @@ python3 SRARec.py \
 Then run SRARec using the custom reference index:
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX \
+python3 SRARec1.2.py SRRXXXXXXXX \
   --slow \
   --virus <custom_name>
 ```
@@ -284,9 +284,9 @@ SRARec can start from three main input types.
 
 | Input type | Use when | Basic command pattern |
 |---|---|---|
-| **SRA accession** | The reads are public in NCBI-SRA | `python3 SRARec.py SRRXXXXXXXX [options]` |
-| **Local FASTQ** | The reads are already available locally | `python3 SRARec.py --simulacion reads.fastq output_folder [options]` |
-| **Precomputed BAM** | Mapping has already been performed | `python3 SRARec.py sample_folder --bam [options]` |
+| **SRA accession** | The reads are public in NCBI-SRA | `python3 SRARec1.2.py SRRXXXXXXXX [options]` |
+| **Local FASTQ** | The reads are already available locally | `python3 SRARec1.2.py --simulacion reads.fastq output_folder [options]` |
+| **Precomputed BAM** | Mapping has already been performed | `python3 SRARec1.2.py sample_folder --bam [options]` |
 
 #### SRA accession
 
@@ -307,7 +307,7 @@ Use `--simulacion` for local FASTQ files.
 Single-end input:
 
 ```bash
-python3 SRARec.py \
+python3 SRARec1.2.py \
   --simulacion \
   reads.fastq \
   sample_output_folder \
@@ -319,7 +319,7 @@ python3 SRARec.py \
 Paired-end input:
 
 ```bash
-python3 SRARec.py \
+python3 SRARec1.2.py \
   --simulacion \
   reads_R1.fastq \
   reads_R2.fastq \
@@ -344,7 +344,7 @@ PACBIO_SMRT
 Use `--bam` when the BAM file already exists.
 
 ```bash
-python3 SRARec.py \
+python3 SRARec1.2.py \
   sample_folder \
   --bam \
   --platform ILLUMINA \
@@ -374,7 +374,7 @@ This mode skips FASTQ preprocessing and mapping, then proceeds to the read-level
 The slow mode trims reads before mapping and is recommended for standard analyses:
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX \
+python3 SRARec1.2.py SRRXXXXXXXX \
   --slow \
   --virus <reference_selector>
 ```
@@ -397,7 +397,7 @@ SRA download
 The fast mode is used by default when `--slow` is not provided:
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX \
+python3 SRARec1.2.py SRRXXXXXXXX \
   --virus <reference_selector>
 ```
 
@@ -437,7 +437,7 @@ Each argument accepts a comma-separated list.
 For conservative recombination detection, use stricter thresholds than the exploratory defaults:
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX \
+python3 SRARec1.2.py SRRXXXXXXXX \
   --slow \
   --MIN_READS_LIST 10 \
   --READS_GAMETOS_MINORITARIOS_LIST 5 \
@@ -456,7 +456,7 @@ at least 5% frequency for each gamete
 #### Testing several threshold combinations
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX \
+python3 SRARec1.2.py SRRXXXXXXXX \
   --slow \
   --MIN_READS_LIST 5,10,20 \
   --READS_GAMETOS_MINORITARIOS_LIST 1,5,10 \
@@ -477,7 +477,7 @@ To restrict the analysis to base substitutions and ignore insertions and deletio
 Example:
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX \
+python3 SRARec1.2.py SRRXXXXXXXX \
   --slow \
   --noindel \
   --virus <reference_selector>
@@ -490,7 +490,7 @@ python3 SRARec.py SRRXXXXXXXX \
 ### Standard SARS-CoV-2 analysis from SRA
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX \
+python3 SRARec1.2.py SRRXXXXXXXX \
   --slow \
   --MIN_READS_LIST 10 \
   --READS_GAMETOS_MINORITARIOS_LIST 5 \
@@ -500,7 +500,7 @@ python3 SRARec.py SRRXXXXXXXX \
 ### Exploratory SARS-CoV-2 analysis from SRA
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX \
+python3 SRARec1.2.py SRRXXXXXXXX \
   --MIN_READS_LIST 5 \
   --READS_GAMETOS_MINORITARIOS_LIST 1 \
   --THRESHOLD_GAMETO_FREQ_LIST 0.00
@@ -509,7 +509,7 @@ python3 SRARec.py SRRXXXXXXXX \
 ### HIV-1 analysis from SRA
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX \
+python3 SRARec1.2.py SRRXXXXXXXX \
   --slow \
   --virus hiv \
   --MIN_READS_LIST 10 \
@@ -522,7 +522,7 @@ python3 SRARec.py SRRXXXXXXXX \
 Index the reference first:
 
 ```bash
-python3 SRARec.py \
+python3 SRARec1.2.py \
   --index_only \
   --custom_ref references/my_virus.fasta
 ```
@@ -530,7 +530,7 @@ python3 SRARec.py \
 Then run the analysis:
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX \
+python3 SRARec1.2.py SRRXXXXXXXX \
   --slow \
   --virus my_virus \
   --MIN_READS_LIST 10 \
@@ -541,7 +541,7 @@ python3 SRARec.py SRRXXXXXXXX \
 ### Local paired-end Illumina analysis
 
 ```bash
-python3 SRARec.py \
+python3 SRARec1.2.py \
   --simulacion \
   sample_R1.fastq \
   sample_R2.fastq \
@@ -554,7 +554,7 @@ python3 SRARec.py \
 ### Local ONT analysis
 
 ```bash
-python3 SRARec.py \
+python3 SRARec1.2.py \
   --simulacion \
   reads.fastq \
   sample_output \
@@ -566,7 +566,7 @@ python3 SRARec.py \
 ### BAM-based analysis
 
 ```bash
-python3 SRARec.py \
+python3 SRARec1.2.py \
   sample_output \
   --bam \
   --platform ILLUMINA \
@@ -578,9 +578,9 @@ python3 SRARec.py \
 ## Command-line reference
 
 ```text
-usage: SRARec.py [options] <SRR>
-       SRARec.py --simulacion <fastq1> [fastq2] <output_folder> [options]
-       SRARec.py <sample_folder> --bam [options]
+usage: SRARec1.2.py [options] <SRR>
+       SRARec1.2.py --simulacion <fastq1> [fastq2] <output_folder> [options]
+       SRARec1.2.py <sample_folder> --bam [options]
 ```
 
 ### Main arguments
@@ -683,7 +683,7 @@ SRARec automatically prepares the reference indexes required for mapping. For bu
 Fast mode is the default mode. It is designed to reduce runtime by first identifying informative reads and then focusing the final analysis on those reads.
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX --virus <reference_selector>
+python3 SRARec1.2.py SRRXXXXXXXX --virus <reference_selector>
 ```
 
 ### Slow mode
@@ -691,7 +691,7 @@ python3 SRARec.py SRRXXXXXXXX --virus <reference_selector>
 Slow mode performs trimming before mapping and is recommended for standard analyses.
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX --slow --virus <reference_selector>
+python3 SRARec1.2.py SRRXXXXXXXX --slow --virus <reference_selector>
 ```
 
 ### Local/simulation mode
@@ -699,7 +699,7 @@ python3 SRARec.py SRRXXXXXXXX --slow --virus <reference_selector>
 Local/simulation mode starts from user-provided FASTQ files.
 
 ```bash
-python3 SRARec.py \
+python3 SRARec1.2.py \
   --simulacion \
   reads_R1.fastq \
   reads_R2.fastq \
@@ -714,7 +714,7 @@ python3 SRARec.py \
 BAM/RAVI mode starts from an existing BAM file and proceeds directly to the final polymorphism and four-gamete-test analysis.
 
 ```bash
-python3 SRARec.py sample_folder --bam --platform ILLUMINA --virus <reference_selector>
+python3 SRARec1.2.py sample_folder --bam --platform ILLUMINA --virus <reference_selector>
 ```
 
 ---
@@ -742,7 +742,7 @@ Activate it with:
 Example using local paired-end FASTQ files:
 
 ```bash
-python3 SRARec.py \
+python3 SRARec1.2.py \
   --simulacion \
   --use_shiver_assembly \
   reads_R1.fastq \
@@ -760,7 +760,7 @@ python3 SRARec.py \
 Example using one SRA accession:
 
 ```bash
-python3 SRARec.py \
+python3 SRARec1.2.py \
   --use_shiver_assembly \
   SRRXXXXXXXX \
   --virus hiv \
@@ -1146,7 +1146,7 @@ SRARec/
 ├── LICENSE
 ├── requirements.txt
 ├── environment.yml
-├── SRARec.py
+├── SRARec1.2.py
 ├── scripts/
 │   └── generate_graphs.py
 ├── SARS_CoV-2/
