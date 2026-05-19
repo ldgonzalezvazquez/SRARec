@@ -354,15 +354,40 @@ python3 SRARec.py SRRXXXXXXXX \
 ---
 
 ## Basic usage
+### Reference indexing
 
-### Run the default pipeline from an SRA accession
+SRARec automatically prepares the reference indexes required for mapping.
+
+For the built-in references (SARS-CoV-2, HIV-1), no additional step is needed:
+
+For example, run the default pipeline from an SRA accession
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX \
-  --virus path/to/reference.fasta
+python3 SRARec1.2.py SRRXXXXXXXX \
+  --virus 
 ```
+or 
+```bash
+python3 SRARec1.2.py SRRXXXXXXXX \
+  --virus hiv
+```
+If no virus is specified, SRARec uses SARS-CoV-2 by default.
 
-In SRA mode, SRARec automatically:
+For any custom virus, the reference must first be indexed with --index_only:
+```bash
+python3 SRARec1.2.py  \
+  --index_only
+  --custom_ref path/to/custom_refence.gasta
+```
+This creates the custom reference index. After that, SRARec can be run normally by specifying the custom virus name and the corresponding SRA accession:
+
+```bash
+python3 SRARec1.2.py SRRXXXXXXXX \
+  --virus <virus_name>
+```
+Any value passed to --virus that is not recognized as SARS-CoV-2 or HIV will use the latest custom reference index created with --index_only.
+
+### In SRA mode, SRARec automatically:
 
 1. retrieves the sequencing platform and library layout from NCBI;
 2. downloads the SRA file with `prefetch`;
@@ -376,7 +401,7 @@ In SRA mode, SRARec automatically:
 ```bash
 python3 SRARec.py SRRXXXXXXXX \
   --slow \
-  --virus path/to/reference.fasta
+  --virus <virus_name>
 ```
 
 The **slow** pipeline performs trimming before mapping and is recommended for standard analyses.
@@ -387,7 +412,7 @@ The **slow** pipeline performs trimming before mapping and is recommended for st
 
 ```bash
 python3 SRARec.py SRRXXXXXXXX \
-  --virus path/to/reference.fasta
+  --virus <virus_name>
 ```
 
 The **fast** pipeline is used by default when `--slow` is not provided.
@@ -409,7 +434,7 @@ python3 SRARec.py \
   reads_R2.fastq \
   sample_output_folder \
   --slow \
-  --virus path/to/reference.fasta \
+  --virus <virus_name> \
   --platform ILLUMINA
 ```
 
@@ -421,7 +446,7 @@ python3 SRARec.py \
   reads.fastq \
   sample_output_folder \
   --slow \
-  --virus path/to/reference.fasta \
+  --virus <virus_name> \
   --platform ILLUMINA
 ```
 
@@ -445,7 +470,7 @@ SRARec can also start from a BAM file using `--bam`.
 python3 SRARec.py \
   sample_folder \
   --bam \
-  --virus path/to/reference.fasta \
+  --virus <virus_name> \
   --platform ILLUMINA
 ```
 
@@ -473,7 +498,7 @@ Example:
 python3 SRARec.py SRRXXXXXXXX \
   --slow \
   --noindel \
-  --virus path/to/reference.fasta
+  --virus <virus_name>
 ```
 
 This option restricts the analysis to base substitutions and ignores indel events when extracting polymorphic positions.
@@ -502,7 +527,7 @@ python3 SRARec.py SRRXXXXXXXX \
   --MIN_READS_LIST 10 \
   --READS_GAMETOS_MINORITARIOS_LIST 5 \
   --THRESHOLD_GAMETO_FREQ_LIST 0.05 \
-  --virus path/to/reference.fasta
+  --virus <virus_name>
 ```
 
 Example testing several parameter combinations:
@@ -513,7 +538,7 @@ python3 SRARec.py SRRXXXXXXXX \
   --MIN_READS_LIST 5,10,20 \
   --READS_GAMETOS_MINORITARIOS_LIST 1,5,10 \
   --THRESHOLD_GAMETO_FREQ_LIST 0.00,0.05,0.10 \
-  --virus path/to/reference.fasta
+  --virus <virus_name>
 ```
 
 SRARec will run the final recombination analysis for every combination of the provided thresholds.
@@ -530,7 +555,7 @@ python3 SRARec.py SRRXXXXXXXX \
   --MIN_READS_LIST 10 \
   --READS_GAMETOS_MINORITARIOS_LIST 5 \
   --THRESHOLD_GAMETO_FREQ_LIST 0.05 \
-  --virus path/to/reference.fasta
+  --virus <virus_name>
 ```
 
 These settings require:
@@ -554,7 +579,7 @@ SRARec v1.2 includes four practical workflows.
 Default mode.
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX --virus reference.fasta
+python3 SRARec.py SRRXXXXXXXX --virus <virus_name>
 ```
 
 Main steps:
@@ -583,7 +608,7 @@ This mode is designed to reduce computational load by focusing the final analysi
 Recommended mode for standard analyses.
 
 ```bash
-python3 SRARec.py SRRXXXXXXXX --slow --virus reference.fasta
+python3 SRARec.py SRRXXXXXXXX --slow --virus <virus_name>
 ```
 
 Main steps:
@@ -614,7 +639,7 @@ python3 SRARec.py \
   reads_R2.fastq \
   sample_output_folder \
   --slow \
-  --virus reference.fasta
+  --virus <virus_name>
 ```
 
 This mode skips SRA download and starts directly from user-provided FASTQ files.
@@ -629,7 +654,7 @@ Used when a BAM file is already available.
 python3 SRARec.py \
   sample_folder \
   --bam \
-  --virus reference.fasta
+  --virus <virus_name>
 ```
 
 This mode skips FASTQ preprocessing and mapping, then proceeds to sorting, fixing mate information, indexing, pileup generation and recombination analysis.
@@ -663,7 +688,7 @@ python3 SRARec.py \
   reads_R1.fastq \
   reads_R2.fastq \
   sample_output_folder \
-  --virus path/to/reference.fasta \
+  --virus <virus_name> \
   --platform ILLUMINA \
   --shiver_dir software/shiver \
   --rnaviralspades software/SPAdes-4.2.0-Linux/bin/rnaviralspades.py \
@@ -678,7 +703,7 @@ Example using one SRA accession:
 python3 SRARec.py \
   --use_shiver_assembly \
   SRRXXXXXXXX \
-  --virus path/to/reference.fasta \
+  --virus <virus_name> \
   --platform ILLUMINA \
   --shiver_dir software/shiver \
   --rnaviralspades software/SPAdes-4.2.0-Linux/bin/rnaviralspades.py \
@@ -1033,7 +1058,9 @@ usage: SRARec.py [options] <SRR>
 | `--slow` | Use the slow pipeline. If omitted, the fast pipeline is used by default |
 | `--simulacion` | Use local FASTQ files instead of downloading from SRA |
 | `--bam` | Start from an existing BAM file |
-| `--virus PATH` | Path to the reference FASTA file |
+| `--virus TEXT` | Virus/reference name. Built-in options include `sars-cov-2` and `hiv`/`vih`; any other value uses the latest custom reference index |
+| `--custom_ref PATH` | Path to a custom reference FASTA. Used only with `--index_only` |
+| `--index_only` | Create or overwrite the custom reference index and exit |
 | `--platform TEXT` | Sequencing platform for local/simulation mode |
 | `--noindel` | Ignore insertions and deletions |
 | `--verbose` | Activate verbose output |
