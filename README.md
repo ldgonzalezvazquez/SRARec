@@ -211,7 +211,6 @@ picard --version
 rnaviralspades.py --help
 ```
 
-> Replace `SRARec1.2.py` with the actual script name if your repository uses a versioned file such as `SRARec1.2.py`.
 
 ---
 
