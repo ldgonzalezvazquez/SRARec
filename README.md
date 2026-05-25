@@ -612,7 +612,7 @@ usage: SRARec1.2.py [options] <SRR>
 | `--spades_threads` | Threads for SPAdes | `8` |
 | `--spades_mem_gb` | Memory in GB for SPAdes | `12` |
 | `--shiver_threads` | Threads for SHIVER | `6` |
-| `--shiver_dir` | Relative path to the SHIVER directory, or the SHIVER directory available in the current environment | `software/shiver` |
+| `--shiver_dir` | Relative path to the SHIVER directory, or the SHIVER directory available in the current environment | `"$CONDA_PREFIX"` |
 | `--shiver_ref_alignment` | Relative path to the SHIVER reference alignment | `MyRefAlign.fasta` |
 | `--shiver_adapters` | Relative path to the adapter FASTA used by SHIVER | `adapters.fa` |
 | `--shiver_primers` | Relative path to the primer FASTA used by SHIVER. If no separate primer FASTA is used, `adapters.fa` can also be passed here | `adapters.fa` |
@@ -758,7 +758,7 @@ python3 SRARec1.2.py \
   --virus hiv \
   --platform ILLUMINA \
   --spades spades.py \
-  --shiver_dir \
+  --shiver_dir "$CONDA_PREFIX" \
   --shiver_ref_alignment MyRefAlign.fasta \
   --shiver_adapters adapters.fa \
   --shiver_primers adapters.fa
@@ -773,7 +773,7 @@ python3 SRARec1.2.py \
   --virus hiv \
   --platform ILLUMINA \
   --spades spades.py \
-  --shiver_dir \
+  --shiver_dir "$CONDA_PREFIX" \
   --shiver_ref_alignment MyRefAlign.fasta \
   --shiver_adapters adapters.fa \
   --shiver_primers adapters.fa
