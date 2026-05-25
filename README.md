@@ -180,7 +180,7 @@ The main dependencies are:
 | **SAMtools** | BAM/SAM processing, sorting, indexing and pileup generation | [SAMtools / HTSlib](https://www.htslib.org/) |
 | **BCFtools** | Optional VCF generation for potential coinfection analyses | [BCFtools](https://samtools.github.io/bcftools/) |
 | **Picard** | Reference dictionary creation in selected workflows | [Picard](https://broadinstitute.github.io/picard/) |
-| **SPAdes / rnaviralSPAdes** | Optional viral assembly before SHIVER-based analysis | [SPAdes GitHub repository](https://github.com/ablab/spades) |
+| **SPAdes** | Optional viral assembly before SHIVER-based analysis | [SPAdes GitHub repository](https://github.com/ablab/spades) |
 | **SHIVER** | Optional sample-specific HIV reference reconstruction and read mapping | [SHIVER GitHub repository](https://github.com/ChrisHIV/shiver) |
 | **NGSNGS** | Optional read simulation for validation analyses | [NGSNGS GitHub repository](https://github.com/RAHenriksen/NGSNGS) |
 
@@ -207,7 +207,7 @@ minimap2 --version
 samtools --version
 bcftools --version
 picard --version
-rnaviralspades.py --help
+spades.py --help
 ```
 
 
@@ -229,7 +229,7 @@ SRARec can use built-in references or a custom reference.
 | Reference type | How to use it |
 |---|---|
 | Default SARS-CoV-2 reference | Run without `--virus`, or use the SARS-CoV-2 option supported by the current script |
-| HIV-1 reference | Use `--virus hiv` or `--virus vih`, depending on the accepted aliases in the script |
+| HIV-1 reference | Use `--virus hiv` |
 | Custom reference | First create the custom index with `--index_only --custom_ref`; then run the analysis using `--virus <custom_name>` |
 
 In SRARec v1.2, `--virus` should be understood mainly as a **reference selector**. For custom references, the FASTA path is provided during indexing with `--custom_ref`, not directly as the main analysis argument.
@@ -293,7 +293,6 @@ Accepted accession formats include:
 ```text
 SRRXXXXXXXX
 ERRXXXXXXXX
-DRRXXXXXXXX
 ```
 
 In SRA mode, SRARec retrieves sequencing metadata from NCBI, downloads the SRA file, converts it to FASTQ and then runs the selected pipeline.
@@ -608,15 +607,15 @@ usage: SRARec1.2.py [options] <SRR>
 
 | Argument | Description | Default |
 |---|---|---|
-| `--use_shiver_assembly` | Run rnaviralSPAdes + SHIVER before BAM-mode analysis | disabled |
-| `--shiver_dir` | Path to SHIVER directory | `software/shiver` |
-| `--rnaviralspades` | Path to `rnaviralspades.py` | `./software/SPAdes-4.2.0-Linux/bin/rnaviralspades.py` |
-| `--spades_threads` | Threads for rnaviralSPAdes | `8` |
-| `--spades_mem_gb` | Memory in GB for rnaviralSPAdes | `12` |
+| `--use_shiver_assembly` | Run SPAdes in RNA-viral mode followed by SHIVER before BAM/RAVI analysis | disabled |
+| `--spades` | Path or command name for the SPAdes executable. Use `spades.py`; SRARec adds the RNA-viral mode internally | `spades.py` |
+| `--spades_threads` | Threads for SPAdes | `8` |
+| `--spades_mem_gb` | Memory in GB for SPAdes | `12` |
 | `--shiver_threads` | Threads for SHIVER | `6` |
-| `--shiver_ref_alignment` | Reference alignment for SHIVER | `MyRefAligment.fasta` |
-| `--shiver_adapters` | Adapter FASTA for SHIVER | `MyAdapters.fasta` |
-| `--shiver_primers` | Primer FASTA for SHIVER | `MyPrimers.fasta` |
+| `--shiver_dir` | Relative path to the SHIVER directory, or the SHIVER directory available in the current environment | `software/shiver` |
+| `--shiver_ref_alignment` | Relative path to the SHIVER reference alignment | `MyRefAlign.fasta` |
+| `--shiver_adapters` | Relative path to the adapter FASTA used by SHIVER | `adapters.fa` |
+| `--shiver_primers` | Relative path to the primer FASTA used by SHIVER. If no separate primer FASTA is used, `adapters.fa` can also be passed here | `adapters.fa` |
 | `--spades_conda_env` | Optional Conda environment for SPAdes | `none` |
 
 ---
@@ -630,7 +629,6 @@ SRARec accepts public SRA run accessions such as:
 ```text
 SRRXXXXXXXX
 ERRXXXXXXXX
-DRRXXXXXXXX
 ```
 
 For SRA accessions, SRARec automatically retrieves the sequencing platform and library layout from NCBI before downloading and processing the reads.
@@ -717,13 +715,14 @@ python3 SRARec1.2.py sample_folder --bam --platform ILLUMINA --virus <reference_
 
 ---
 
+
 ## Optional HIV assembly-based workflow
 
-SRARec v1.2 includes an optional workflow combining:
+SRARec v1.2 includes an optional HIV-focused workflow combining:
 
 ```text
 trimming
-  → rnaviralSPAdes
+  → SPAdes in RNA-viral mode
   → SHIVER
   → BAM generation
   → BAM/RAVI recombination analysis
@@ -737,7 +736,17 @@ Activate it with:
 --use_shiver_assembly
 ```
 
-Example using local paired-end FASTQ files:
+The SPAdes executable should be provided as:
+
+```bash
+--spades spades.py
+```
+
+SRARec handles the RNA-viral SPAdes mode internally. 
+
+If the project includes a specific primer FASTA, replace the last value with that primer file. If no separate primer file is used, `adapters.fa` can be passed as both the adapter file and the primer file.
+
+### Example using local paired-end FASTQ files
 
 ```bash
 python3 SRARec1.2.py \
@@ -748,14 +757,14 @@ python3 SRARec1.2.py \
   hiv_sample \
   --virus hiv \
   --platform ILLUMINA \
-  --shiver_dir software/shiver \
-  --rnaviralspades software/SPAdes-4.2.0-Linux/bin/rnaviralspades.py \
-  --shiver_ref_alignment MyRefAligment.fasta \
-  --shiver_adapters MyAdapters.fasta \
-  --shiver_primers MyPrimers.fasta
+  --spades spades.py \
+  --shiver_dir \
+  --shiver_ref_alignment MyRefAlign.fasta \
+  --shiver_adapters adapters.fa \
+  --shiver_primers adapters.fa
 ```
 
-Example using one SRA accession:
+### Example using one SRA accession
 
 ```bash
 python3 SRARec1.2.py \
@@ -763,15 +772,14 @@ python3 SRARec1.2.py \
   SRRXXXXXXXX \
   --virus hiv \
   --platform ILLUMINA \
-  --shiver_dir software/shiver \
-  --rnaviralspades software/SPAdes-4.2.0-Linux/bin/rnaviralspades.py \
-  --shiver_ref_alignment MyRefAligment.fasta \
-  --shiver_adapters MyAdapters.fasta \
-  --shiver_primers MyPrimers.fasta
+  --spades spades.py \
+  --shiver_dir \
+  --shiver_ref_alignment MyRefAlign.fasta \
+  --shiver_adapters adapters.fa \
+  --shiver_primers adapters.fa
 ```
 
 ---
-
 ## Outputs
 
 The main SRARec output is written to:
