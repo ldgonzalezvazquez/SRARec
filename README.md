@@ -135,13 +135,8 @@ conda create -n srarec python=3.10
 conda activate srarec
 ```
 
-Install the Python requirements:
 
-```bash
-pip install -r requirements.txt
-```
-
-If the repository includes an `environment.yml` file, the environment can alternatively be created with:
+The environment can alternatively be created with the 'environment.yml' file:
 
 ```bash
 conda env create -f environment.yml
@@ -184,7 +179,7 @@ The main dependencies are:
 | **SHIVER** | Optional sample-specific HIV reference reconstruction and read mapping | [SHIVER GitHub repository](https://github.com/ChrisHIV/shiver) |
 | **NGSNGS** | Optional read simulation for validation analyses | [NGSNGS GitHub repository](https://github.com/RAHenriksen/NGSNGS) |
 
-Some tools, especially **BBMap/BBTools**, **SHIVER**, **NGSNGS** and some **rnaviralSPAdes** installations, may need to be installed manually depending on the system.
+Some tools, especially **BBMap/BBTools**, **SHIVER**, **NGSNGS**, may need to be installed manually depending on the system.
 
 ### 4. Check the installation
 
@@ -239,7 +234,7 @@ In SRARec v1.2, `--virus` should be understood mainly as a **reference selector*
 If no virus is specified, SRARec uses the default SARS-CoV-2 reference:
 
 ```text
-SARS_CoV-2/NC_045512.2.fna
+NC_045512.2.fna
 ```
 
 Example:
@@ -663,7 +658,6 @@ sample_folder/
 
 | Virus/reference type | Default or expected reference |
 |---|---|
-| **SARS-CoV-2** | `SARS_CoV-2/NC_045512.2.fna` |
 | **SARS-CoV-2 accession** | `NC_045512.2` |
 | **HIV-1 accession** | `NC_001802.1` |
 | **Custom virus/genome** | FASTA provided with `--custom_ref` during `--index_only` |
@@ -1148,7 +1142,7 @@ BibTeX placeholder:
 ```bibtex
 @software{SRARec,
   title        = {SRARec: read-level detection of recombination signals from SRA and local sequencing data},
-  author       = {Iglesias-Rivas, Paula and González-Vázquez, Luis Daniel and Martin, Arenas, Miguel and Darren P.},
+  author       = {González-Vázquez, Luis Daniel and Iglesias-Rivas, Paula, and Martin, Arenas, Miguel and Darren P.},
   year         = {2026},
   version      = {1.2},
   license      = {MIT}
