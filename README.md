@@ -37,9 +37,6 @@ It supports **Illumina**, **Oxford Nanopore Technologies (ONT)** and **PacBio** 
   - [Step 4. Choose detection thresholds](#step-4-choose-detection-thresholds)
 - [Usage examples](#usage-examples)
 - [Command-line reference](#command-line-reference)
-- [Input data](#input-data)
-- [Reference genomes](#reference-genomes)
-- [Analysis modes](#analysis-modes)
 - [Optional HIV assembly-based workflow](#optional-hiv-assembly-based-workflow)
 - [Outputs](#outputs)
 - [Plotting recombination profiles](#plotting-recombination-profiles)
@@ -228,6 +225,7 @@ SRARec can use built-in references or a custom reference.
 | Custom reference | First create the custom index with `--index_only --custom_ref`; then run the analysis using `--virus <custom_name>` |
 
 In SRARec v1.2, `--virus` should be understood mainly as a **reference selector**. For custom references, the FASTA path is provided during indexing with `--custom_ref`, not directly as the main analysis argument.
+SRARec automatically prepares the reference indexes required for mapping. For built-in references, no manual indexing step is needed.
 
 #### Built-in SARS-CoV-2 reference
 
@@ -612,100 +610,6 @@ usage: SRARec1.2.py [options] <SRR>
 | `--shiver_adapters` | Relative path to the adapter FASTA used by SHIVER | `adapters.fa` |
 | `--shiver_primers` | Relative path to the primer FASTA used by SHIVER. If no separate primer FASTA is used, `adapters.fa` can also be passed here | `adapters.fa` |
 | `--spades_conda_env` | Optional Conda environment for SPAdes | `none` |
-
----
-
-## Input data
-
-### NCBI-SRA accessions
-
-SRARec accepts public SRA run accessions such as:
-
-```text
-SRRXXXXXXXX
-ERRXXXXXXXX
-```
-
-For SRA accessions, SRARec automatically retrieves the sequencing platform and library layout from NCBI before downloading and processing the reads.
-
-### Local FASTQ files
-
-SRARec accepts uncompressed or compressed FASTQ files:
-
-```text
-sample.fastq
-sample.fastq.gz
-sample_R1.fastq
-sample_R2.fastq
-sample_R1.fastq.gz
-sample_R2.fastq.gz
-```
-
-Local FASTQ analyses require `--simulacion` and `--platform`.
-
-### BAM files
-
-BAM input is used with `--bam`. The expected structure is:
-
-```text
-sample_folder/
-└── sample_folder.bam
-```
-
----
-
-## Reference genomes
-
-| Virus/reference type | Default or expected reference |
-|---|---|
-| **SARS-CoV-2 accession** | `NC_045512.2` |
-| **HIV-1 accession** | `NC_001802.1` |
-| **Custom virus/genome** | FASTA provided with `--custom_ref` during `--index_only` |
-
-SRARec automatically prepares the reference indexes required for mapping. For built-in references, no manual indexing step is needed.
-
----
-
-## Analysis modes
-
-### Fast mode
-
-Fast mode is the default mode. It is designed to reduce runtime by first identifying informative reads and then focusing the final analysis on those reads.
-
-```bash
-python3 SRARec1.2.py SRRXXXXXXXX --virus <reference_selector>
-```
-
-### Slow mode
-
-Slow mode performs trimming before mapping and is recommended for standard analyses.
-
-```bash
-python3 SRARec1.2.py SRRXXXXXXXX --slow --virus <reference_selector>
-```
-
-### Local/simulation mode
-
-Local/simulation mode starts from user-provided FASTQ files.
-
-```bash
-python3 SRARec1.2.py \
-  --simulacion \
-  reads_R1.fastq \
-  reads_R2.fastq \
-  sample_output_folder \
-  --slow \
-  --platform ILLUMINA \
-  --virus <reference_selector>
-```
-
-### BAM/RAVI mode
-
-BAM/RAVI mode starts from an existing BAM file and proceeds directly to the final polymorphism and four-gamete-test analysis.
-
-```bash
-python3 SRARec1.2.py sample_folder --bam --platform ILLUMINA --virus <reference_selector>
-```
 
 ---
 
