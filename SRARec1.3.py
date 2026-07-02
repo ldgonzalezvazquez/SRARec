@@ -33,6 +33,11 @@ MAX_DOWNLOAD_ATTEMPTS = 3
 VERBOSE = False
 
 
+def _to_one_based(pos) -> int:
+    """Convert internal 0-based coordinates to 1-based for results output."""
+    return int(pos) + 1
+
+
 
 # No guardar rangos inicio/fin por read (ahorra RAM/tiempo)
 SAVE_READS_MINMAX = True
@@ -2180,11 +2185,18 @@ def pasos_comunes_slow_fast(srr, base_dir, refseq, work_dir, platform, layout, f
                     false_list.append((pA, pB, info["detail"]))
 
         # Formateamos las parejas True y False
-        true_pairs = ";".join([f"{pA},{pB},{bigger_count},{detail}" for (pA, pB, detail, bigger_count) in true_list])
-        false_pairs = ";".join([f"{a},{b},{detail}" for (a, b, detail) in false_list])
+        true_pairs = ";".join(
+            [f"{_to_one_based(pA)},{_to_one_based(pB)},{bigger_count},{detail}"
+             for (pA, pB, detail, bigger_count) in true_list]
+        )
+        false_pairs = ";".join(
+            [f"{_to_one_based(a)},{_to_one_based(b)},{detail}" for (a, b, detail) in false_list]
+        )
 
         # (1) Formatear reads_in_fin en forma "110,300;301,450;..."
-        reads_in_fin_str = ";".join(f"{st},{en}" for (st, en) in reads_in_fin)
+        reads_in_fin_str = ";".join(
+            f"{_to_one_based(st)},{_to_one_based(en)}" for (st, en) in reads_in_fin
+        )
 
         # Nombramos el archivo de resultados (versión según tu ejemplo)
         result_filename = base_dir / f"results_{modo}.txt"
@@ -2358,11 +2370,18 @@ def pasos_ravi(srr, base_dir, refseq, work_dir, platform, dedup_bam, modo, noind
                     false_list.append((pA, pB, info["detail"]))
 
         # Formateamos las parejas True y False
-        true_pairs = ";".join([f"{pA},{pB},{bigger_count},{detail}" for (pA, pB, detail, bigger_count) in true_list])
-        false_pairs = ";".join([f"{a},{b},{detail}" for (a, b, detail) in false_list])
+        true_pairs = ";".join(
+            [f"{_to_one_based(pA)},{_to_one_based(pB)},{bigger_count},{detail}"
+             for (pA, pB, detail, bigger_count) in true_list]
+        )
+        false_pairs = ";".join(
+            [f"{_to_one_based(a)},{_to_one_based(b)},{detail}" for (a, b, detail) in false_list]
+        )
 
         # (1) Formatear reads_in_fin en forma "110,300;301,450;..."
-        reads_in_fin_str = ";".join(f"{st},{en}" for (st, en) in reads_in_fin)
+        reads_in_fin_str = ";".join(
+            f"{_to_one_based(st)},{_to_one_based(en)}" for (st, en) in reads_in_fin
+        )
 
         # Nombramos el archivo de resultados (versión según tu ejemplo)
         result_filename = base_dir / f"results_{modo}.txt"
