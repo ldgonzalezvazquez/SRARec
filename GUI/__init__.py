@@ -1,1 +1,0 @@
-"""SRARec Desktop GUI package."""

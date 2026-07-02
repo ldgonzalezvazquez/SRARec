@@ -2,7 +2,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.x-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](#graphical-user-interface-gui)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](#srarec-desktop-macos-gui)
 [![Version](https://img.shields.io/badge/version-1.3-green.svg)](#citation)
 
 **SRARec** is an open-source Python tool for detecting read-supported recombination-compatible signals from high-throughput sequencing data. It implements a read-level version of the **four-gamete test**, allowing recombination signal to be evaluated from physically linked variants observed within sequencing reads.
@@ -20,7 +20,7 @@ It supports **Illumina**, **Oxford Nanopore Technologies (ONT)** and **PacBio** 
 > For analyses associated with the **CoViE study**, use the `Exclusive_CoViE` branch.
 
 > **macOS users — BAM analysis without the terminal**  
-> Download **[SRARec Desktop](https://github.com/ldgonzalezvazquez/SRARec/releases/download/desktop-v1.0.0/SRARec-Desktop-1.0.0.dmg)** (`.dmg` installer). See [SRARec Desktop](#srarec-desktop-macos-gui).
+> Download **[SRARec Desktop](releases/SRARec-Desktop-1.0.0.dmg)** (`.dmg`, ~362 MB). See [SRARec Desktop](#srarec-desktop-macos-gui).
 
 ---
 
@@ -44,7 +44,6 @@ It supports **Illumina**, **Oxford Nanopore Technologies (ONT)** and **PacBio** 
 - [Outputs](#outputs)
 - [Plotting recombination profiles](#plotting-recombination-profiles)
 - [SRARec Desktop (macOS GUI)](#srarec-desktop-macos-gui)
-- [Legacy tkinter GUI](#legacy-tkinter-gui)
 - [Method summary](#method-summary)
 - [Validation](#validation)
 - [Large-scale analyses](#large-scale-analyses)
@@ -855,9 +854,15 @@ The script also computes read start/end concentration curves used in the HTML an
 
 ### Download (macOS)
 
-Download the latest `.dmg` from [GitHub Releases](https://github.com/ldgonzalezvazquez/SRARec/releases):
+The installer is included in this repository:
 
-**[SRARec Desktop 1.0.0 — macOS installer (DMG)](https://github.com/ldgonzalezvazquez/SRARec/releases/download/desktop-v1.0.0/SRARec-Desktop-1.0.0.dmg)**
+**[SRARec Desktop 1.0.0 — macOS installer (DMG)](releases/SRARec-Desktop-1.0.0.dmg)** (~362 MB)
+
+Direct link (after cloning or browsing on GitHub):
+
+```text
+https://github.com/ldgonzalezvazquez/SRARec/raw/main/releases/SRARec-Desktop-1.0.0.dmg
+```
 
 | Requirement | Detail |
 |---|---|
@@ -890,37 +895,6 @@ Download the latest `.dmg` from [GitHub Releases](https://github.com/ldgonzalezv
 | Paired-end | Mates should be fixed (`samtools fixmate`) |
 
 Mapping, trimming, and SRA download must be done **before** using SRARec Desktop (e.g. with `SRARec1.3.py`).
-
-### Build from source
-
-Source code lives in [`GUI/`](GUI/). See [`GUI/README.md`](GUI/README.md) for development setup and PyInstaller packaging.
-
-```bash
-./GUI/packaging/build_macos.sh   # builds ~/Desktop/SRARec-desktop-build/dist/SRARec Desktop.app
-./GUI/packaging/make_dmg.sh      # creates a distributable .dmg
-```
-
----
-
-## Legacy tkinter GUI
-
-The repository may also include an older **tkinter-based GUI** for users who prefer a lightweight interface for SRA/SRARec CLI workflows (SRA accession, local FASTQ, or BAM). That interface supports:
-
-- choose the input data source:
-  - NCBI-SRA accession;
-  - local FASTQ files;
-  - local BAM file;
-- select a predefined reference:
-  - SARS-CoV-2: `NC_045512.2`;
-  - HIV-1: `NC_001802.1`;
-- load a custom reference sequence;
-- adjust detection parameters;
-- ignore indels if desired;
-- switch between slow and fast modes;
-- export detected events in raw or readable format;
-- export interactive genome-wide visual summaries.
-
-The GUI is most suitable for small or moderate analyses. For large batches or high-throughput analyses, the command-line version on a high-performance computing system is recommended.
 
 ---
 
