@@ -20,7 +20,7 @@ It supports **Illumina**, **Oxford Nanopore Technologies (ONT)** and **PacBio** 
 > For analyses associated with the **CoViE study**, use the `Exclusive_CoViE` branch.
 
 > **macOS users — BAM analysis without the terminal**  
-> **[Download SRARec Desktop](https://media.githubusercontent.com/media/ldgonzalezvazquez/SRARec/main/Releases/SRARec-Desktop-1.0.0-macos.zip)** (~300 MB). Unzip, then double-click `Install SRARec Desktop.command`. See [SRARec Desktop](#srarec-desktop-macos-gui).
+> **[Download SRARec Desktop](https://github.com/ldgonzalezvazquez/SRARec/releases/latest/download/SRARec-Desktop-1.0.0-macos.zip)** (~300 MB). Unzip, then double-click `Install SRARec Desktop.command`. See [SRARec Desktop](#srarec-desktop-macos-gui).
 
 ---
 
@@ -854,9 +854,9 @@ The script also computes read start/end concentration curves used in the HTML an
 
 ### Download (macOS)
 
-**[Download SRARec Desktop 1.0.0 (zip)](https://media.githubusercontent.com/media/ldgonzalezvazquez/SRARec/main/Releases/SRARec-Desktop-1.0.0-macos.zip)** (~300 MB)
+**[Download SRARec Desktop 1.0.0 (zip)](https://github.com/ldgonzalezvazquez/SRARec/releases/latest/download/SRARec-Desktop-1.0.0-macos.zip)** (~300 MB)
 
-The archive contains the app bundle and a one-click installer script. The file is stored in this repository via **Git LFS** ([`Releases/`](Releases/)).
+The link starts the download immediately in your browser. The archive contains the app bundle and a one-click installer script (`Install SRARec Desktop.command`).
 
 | Requirement | Detail |
 |---|---|
