@@ -48,7 +48,7 @@ else
     -R "$GITHUB_REPO"
 fi
 
-DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/latest/download/${ASSET_NAME}"
+DOWNLOAD_URL="https://github.com/${GITHUB_REPO}/releases/download/${TAG}/${ASSET_NAME}"
 echo ""
-echo "Direct download URL:"
+echo "Direct download URL (use in README; for pre-releases use tag URL, not /latest/):"
 echo "  $DOWNLOAD_URL"

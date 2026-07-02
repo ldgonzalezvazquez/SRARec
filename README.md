@@ -20,7 +20,7 @@ It supports **Illumina**, **Oxford Nanopore Technologies (ONT)** and **PacBio** 
 > For analyses associated with the **CoViE study**, use the `Exclusive_CoViE` branch.
 
 > **macOS users — BAM analysis without the terminal**  
-> **[Download SRARec Desktop](https://github.com/ldgonzalezvazquez/SRARec/releases/latest/download/SRARec-Desktop-1.0.0-macos.zip)** (~300 MB) — or [download from `Releases/`](https://github.com/ldgonzalezvazquez/SRARec/blob/main/Releases/SRARec-Desktop-1.0.0-macos.zip) if that link shows *Not Found*. See [SRARec Desktop](#srarec-desktop-macos-gui).
+> **[Download SRARec Desktop](https://github.com/ldgonzalezvazquez/SRARec/releases/download/desktop-1.0.0/SRARec-Desktop-1.0.0-macos.zip)** (~300 MB). Unzip, then double-click `Install SRARec Desktop.command`. See [SRARec Desktop](#srarec-desktop-macos-gui).
 
 ---
 
@@ -854,14 +854,10 @@ The script also computes read start/end concentration curves used in the HTML an
 
 ### Download (macOS)
 
-| Method | Link |
-|---|---|
-| **Direct download** (one click) | **[SRARec-Desktop-1.0.0-macos.zip](https://github.com/ldgonzalezvazquez/SRARec/releases/latest/download/SRARec-Desktop-1.0.0-macos.zip)** (~300 MB) |
-| **If you see *Not Found*** | Open [`Releases/SRARec-Desktop-1.0.0-macos.zip`](https://github.com/ldgonzalezvazquez/SRARec/blob/main/Releases/SRARec-Desktop-1.0.0-macos.zip) on GitHub and click **Download** (top-right). |
+**[Download SRARec Desktop 1.0.0 (zip)](https://github.com/ldgonzalezvazquez/SRARec/releases/download/desktop-1.0.0/SRARec-Desktop-1.0.0-macos.zip)** (~300 MB)
 
-The archive contains the app bundle and `Install SRARec Desktop.command`.
-
-> **Maintainers:** the direct-download link only works after you [publish a GitHub Release](#publishing-the-macos-desktop-build) with the zip attached. Until then, use the second row.
+The link starts the download in your browser. The archive contains the app bundle and `Install SRARec Desktop.command`.  
+Release page: [desktop-1.0.0](https://github.com/ldgonzalezvazquez/SRARec/releases/tag/desktop-1.0.0).
 
 | Requirement | Detail |
 |---|---|
@@ -871,26 +867,24 @@ The archive contains the app bundle and `Install SRARec Desktop.command`.
 
 ### Publishing the macOS Desktop build
 
-Run this **once** (or after each new zip) so the README download button works:
+When you publish a **new** zip, update the README download URL if the tag or filename changes.
 
 **GitHub website**
 
 1. Open **[Releases → Draft a new release](https://github.com/ldgonzalezvazquez/SRARec/releases/new)**.
-2. Tag: `desktop-1.0.0` (create new tag).
+2. Tag: `desktop-1.0.0` (or a new tag, e.g. `desktop-1.0.1`).
 3. Title: `SRARec Desktop 1.0.0 (macOS)`.
-4. Check **Set as the latest release**.
-5. Drag **`SRARec-Desktop-1.0.0-macos.zip`** into *Attach binaries* (use the file from your Mac, not the LFS pointer in the repo tree).
-6. Click **Publish release**.
+4. Drag **`SRARec-Desktop-1.0.0-macos.zip`** into *Attach binaries*.
+5. Click **Publish release**.
+
+> **Pre-releases:** GitHub excludes pre-releases from `releases/latest`. Use a tag-specific URL in the README:  
+> `https://github.com/ldgonzalezvazquez/SRARec/releases/download/<tag>/SRARec-Desktop-1.0.0-macos.zip`
 
 **Terminal** (after `brew install gh` and `gh auth login`):
 
 ```bash
 scripts/publish_desktop_release.sh ~/Desktop/SRARec-desktop-build/dist/SRARec-Desktop-1.0.0-macos.zip
 ```
-
-After publishing, this URL starts the download immediately:
-
-`https://github.com/ldgonzalezvazquez/SRARec/releases/latest/download/SRARec-Desktop-1.0.0-macos.zip`
 
 ### Installation
 
