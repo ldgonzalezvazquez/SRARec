@@ -20,7 +20,7 @@ It supports **Illumina**, **Oxford Nanopore Technologies (ONT)** and **PacBio** 
 > For analyses associated with the **CoViE study**, use the `Exclusive_CoViE` branch.
 
 > **macOS users — BAM analysis without the terminal**  
-> Download **[SRARec Desktop](releases/SRARec-Desktop-1.0.0.dmg)** (`.dmg`, ~362 MB). See [SRARec Desktop](#srarec-desktop-macos-gui).
+> Download **[SRARec Desktop](releases/SRARec_Desktop-1.0.0.dmg)** (`.dmg`, ~362 MB). See [SRARec Desktop](#srarec-desktop-macos-gui).
 
 ---
 
