@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/Python-3.x-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](#graphical-user-interface-gui)
-[![Version](https://img.shields.io/badge/version-1.2-green.svg)](#citation)
+[![Version](https://img.shields.io/badge/version-1.3-green.svg)](#citation)
 
 **SRARec** is an open-source Python tool for detecting read-supported recombination-compatible signals from high-throughput sequencing data. It implements a read-level version of the **four-gamete test**, allowing recombination signal to be evaluated from physically linked variants observed within sequencing reads.
 
@@ -18,6 +18,9 @@ It supports **Illumina**, **Oxford Nanopore Technologies (ONT)** and **PacBio** 
 
 > **Project note**  
 > For analyses associated with the **CoViE study**, use the `Exclusive_CoViE` branch.
+
+> **macOS users — BAM analysis without the terminal**  
+> Download **[SRARec Desktop](https://github.com/ldgonzalezvazquez/SRARec/releases/download/desktop-v1.0.0/SRARec-Desktop-1.0.0.dmg)** (`.dmg` installer). See [SRARec Desktop](#srarec-desktop-macos-gui).
 
 ---
 
@@ -40,7 +43,8 @@ It supports **Illumina**, **Oxford Nanopore Technologies (ONT)** and **PacBio** 
 - [Optional HIV assembly-based workflow](#optional-hiv-assembly-based-workflow)
 - [Outputs](#outputs)
 - [Plotting recombination profiles](#plotting-recombination-profiles)
-- [Graphical user interface GUI](#graphical-user-interface-gui)
+- [SRARec Desktop (macOS GUI)](#srarec-desktop-macos-gui)
+- [Legacy tkinter GUI](#legacy-tkinter-gui)
 - [Method summary](#method-summary)
 - [Validation](#validation)
 - [Large-scale analyses](#large-scale-analyses)
@@ -183,8 +187,10 @@ Some tools, especially **BBMap/BBTools**, **SHIVER**, **NGSNGS**, may need to be
 Check that SRARec is available:
 
 ```bash
-python3 SRARec1.2.py --help
+python3 SRARec1.3.py --help
 ```
+
+The previous release `SRARec1.2.py` is kept under `Releases/` for reference.
 
 Check the main external tools:
 
@@ -710,12 +716,16 @@ BegFin_Reads:<read_start_end_coordinates>
 
 For each recombination-compatible signal, SRARec reports:
 
-- genomic position pair;
+- genomic position pair (**1-based** coordinates in `SRARec1.3` and current `generate_graphs.py` output);
 - alleles involved;
 - observed gamete combinations;
 - gamete frequencies;
 - supporting read counts;
 - number of times the event was recovered as true in broader comparisons.
+
+> **Coordinate system**  
+> From **SRARec v1.3** onward, positions written to `Rec`, `No_Rec` and `BegFin_Reads` use **1-based** indexing (first nucleotide = 1).  
+> Older result files that contain position `0` are still supported by `generate_graphs.py`, which detects 0-based legacy files automatically.
 
 ### Optional VCF output for potential coinfections
 
@@ -740,10 +750,10 @@ vcf_coinfecciones/<sample_id>.vcf
 The repository includes the auxiliary script:
 
 ```text
-scripts/generate_graphs.py
+generate_graphs.py
 ```
 
-This script generates genome-wide recombination profiles and interactive figures from SRARec output files.
+at the repository root. It generates genome-wide recombination profiles, interactive HTML figures, PNG plots, and per-position export files from SRARec result files.
 
 It can read SRARec-style result files containing fields such as:
 
@@ -782,44 +792,119 @@ True and false contributions are computed separately. The recombination ratio at
 rho(i) = alpha × true(i) / [true(i) + false(i)]
 ```
 
-when events are available at that position.
+when events are available at that position. Plot axes use **1-based** genomic positions.
 
-Example:
+### CLI example
 
 ```bash
-python3 scripts/generate_graphs.py \
-  --results results_slow.txt \
-  --annotation annotations/NC_045512.2.gb \
-  --genome-len 29903 \
-  --alpha 1 \
-  --aggregate-by-patient \
-  --exclusive-positions \
-  --output-dir figures/sars_cov_2/
+python3 generate_graphs.py results_slow.txt \
+  --annotation SC2.gb \
+  --alpha 1.0
 ```
 
-Main arguments:
+With explicit output HTML:
+
+```bash
+python3 generate_graphs.py results_ravi.txt \
+  -o output/my_sample_profile.html \
+  --annotation SC2.gb
+```
+
+### Main arguments
 
 | Argument | Description |
 |---|---|
-| `--results PATH` | Input SRARec result file |
-| `--annotation PATH` | GenBank or GFF annotation file |
+| `results_txt` | Input SRARec result file (positional) |
+| `-o`, `--output` | Output HTML path |
+| `--annotation` | GenBank annotation file (e.g. `SC2.gb`, `HIV-1.gb`) |
 | `--genome-len INT` | Genome length, if not inferred automatically |
-| `--alpha FLOAT` | Scaling factor for `rho` |
-| `--exclusive-positions` | Prevent true and false signals from overlapping at the same position |
+| `--alpha FLOAT` | Scaling factor for ρ (default: `1.0`) |
+| `--exclusive-positions` | Prevent true/false signals from overlapping at the same position |
 | `--aggregate-by-patient` | Aggregate events by SRA/sample before summing |
 | `--no-coverage` | Skip the coverage curve |
 | `--no-begfin-concentration` | Skip read start/end concentration |
-| `--output-dir PATH` | Output directory for figures and files |
 
-The script can also compute auxiliary curves from `BegFin_Reads`, including coverage and read start/end concentration.
+### Generated files
+
+When run from the command line, the script can write:
+
+| File | Content |
+|---|---|
+| `*_recomb_profile.html` | Interactive Plotly profile |
+| `*_recomb_profile.png` | Static matplotlib figure |
+| `*_recombination_values.txt` | Recombination ratio ρ per position |
+| `*_coverage_values.txt` | Read coverage from `BegFin_Reads` |
+
+The script also computes read start/end concentration curves used in the HTML and PNG plots.
 
 ---
 
-## Graphical user interface GUI
+## SRARec Desktop (macOS GUI)
 
-SRARec includes a simple **tkinter-based graphical user interface** designed for users who prefer not to run command-line workflows.
+**SRARec Desktop** is a standalone macOS application for read-level recombination analysis from **preprocessed BAM** files. It wraps the `SRARec1.3.py` analysis engine and `generate_graphs.py` plotting tools in a graphical workflow — no terminal required for routine BAM-based analyses.
 
-The GUI allows users to:
+### What it does
+
+- Analyse **one or many BAM files in series** from a single run
+- Built-in references: **SARS-CoV-2** and **HIV-1**
+- Adjustable detection thresholds (min reads, gamete support, frequency)
+- Embedded **recombination profile** plot, updated after each sample in a batch
+- Export results in multiple formats (gamete summary, ρ per position, coverage, BegFin, raw lines)
+- Regenerate or save **PNG / HTML** profiles for selected samples
+- Open existing `results_*.txt` files without re-running an analysis
+
+### Download (macOS)
+
+Download the latest `.dmg` from [GitHub Releases](https://github.com/ldgonzalezvazquez/SRARec/releases):
+
+**[SRARec Desktop 1.0.0 — macOS installer (DMG)](https://github.com/ldgonzalezvazquez/SRARec/releases/download/desktop-v1.0.0/SRARec-Desktop-1.0.0.dmg)**
+
+| Requirement | Detail |
+|---|---|
+| Platform | macOS (Apple Silicon or Intel) |
+| Input | Coordinate-sorted, indexed BAM (`.bam` + `.bai`) |
+| Disk space | ~800 MB installed |
+
+### Installation
+
+1. Download `SRARec-Desktop-1.0.0.dmg` from the link above.
+2. Open the DMG and drag **SRARec Desktop** to **Applications**.
+3. On first launch, macOS may block the app because it is not notarized. Open **System Settings → Privacy & Security** and choose **Open Anyway**.
+
+### Quick start
+
+1. Launch **SRARec Desktop**.
+2. Click **Add BAMs...** and select one or more `.bam` files (hold ⌘ to multi-select).
+3. Choose **sequencing platform**, **reference**, and **output folder** (default: `~/SRARec_runs`).
+4. Adjust thresholds if needed, then click **Run analysis**.
+5. Combined results are written to `{output_folder}/results_ravi.txt` (one line per sample).
+6. Use **Regenerate graph**, **Save graph**, or **Save results...** to export figures and tables — including from an existing results file without running a new analysis.
+
+### BAM requirements
+
+| Requirement | Notes |
+|---|---|
+| Coordinate-sorted | `@HD SO:coordinate` in BAM header |
+| Indexed | `.bai` file present (the app can create it) |
+| Deduplicated | Recommended |
+| Paired-end | Mates should be fixed (`samtools fixmate`) |
+
+Mapping, trimming, and SRA download must be done **before** using SRARec Desktop (e.g. with `SRARec1.3.py`).
+
+### Build from source
+
+Source code lives in [`GUI/`](GUI/). See [`GUI/README.md`](GUI/README.md) for development setup and PyInstaller packaging.
+
+```bash
+./GUI/packaging/build_macos.sh   # builds ~/Desktop/SRARec-desktop-build/dist/SRARec Desktop.app
+./GUI/packaging/make_dmg.sh      # creates a distributable .dmg
+```
+
+---
+
+## Legacy tkinter GUI
+
+The repository may also include an older **tkinter-based GUI** for users who prefer a lightweight interface for SRA/SRARec CLI workflows (SRA accession, local FASTQ, or BAM). That interface supports:
 
 - choose the input data source:
   - NCBI-SRA accession;
@@ -1037,7 +1122,7 @@ If you use SRARec, please cite:
 ```text
 González-Vázquez LD, Iglesias-Rivas P,  Arenas , Martin DP. ???
 SRARec: read-level detection of recombination signals from SRA and local sequencing data.
-Version 1.2.
+Version 1.3.
 [Journal / preprint / DOI to be added]
 ```
 
@@ -1048,7 +1133,7 @@ BibTeX placeholder:
   title        = {SRARec: read-level detection of recombination signals from SRA and local sequencing data},
   author       = {González-Vázquez, Luis Daniel and Iglesias-Rivas, Paula, and Martin, Arenas, Miguel and Darren P.},
   year         = {2026},
-  version      = {1.2},
+  version      = {1.3},
   license      = {MIT}
 }
 ```

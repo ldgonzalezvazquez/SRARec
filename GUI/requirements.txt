@@ -1,0 +1,8 @@
+PySide6>=6.6
+pysam>=0.22
+matplotlib>=3.8
+numpy>=1.26
+pandas>=2.0
+tqdm>=4.66
+plotly>=5.18
+biopython>=1.83

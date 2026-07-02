@@ -52,7 +52,77 @@ except ImportError:
 _mire = re.compile(r"mireads=(\d+)")
 _mfre = re.compile(r"minfreq=([0-9]*\.?[0-9]+)")
 
-def _parse_pairs(field: str, expect_big: bool = True):
+
+def _field_has_zero_coord(field: str) -> bool:
+    """Return True if any pair coordinate in a Rec/No_Rec field is zero."""
+    if not field or not str(field).strip():
+        return False
+    for tok in str(field).split(";"):
+        tok = tok.strip()
+        if not tok:
+            continue
+        parts = tok.split(",")
+        if len(parts) < 2:
+            continue
+        try:
+            if int(parts[0]) == 0 or int(parts[1]) == 0:
+                return True
+        except ValueError:
+            continue
+    return False
+
+
+def _begfin_has_zero_coord(field: str) -> bool:
+    """Return True if any BegFin_Reads interval uses coordinate zero."""
+    if not field or not str(field).strip():
+        return False
+    for tok in str(field).split(";"):
+        tok = tok.strip()
+        if not tok:
+            continue
+        try:
+            start_str, end_str = tok.split(",", 1)
+            if int(start_str) == 0 or int(end_str) == 0:
+                return True
+        except ValueError:
+            continue
+    return False
+
+
+def _is_one_based_results(results_path: str) -> bool:
+    """Results are 1-based by default (current SRARec / GUI output).
+
+    Legacy 0-based files are detected only when any coordinate equals zero.
+    """
+    try:
+        with open(results_path, "r", encoding="utf-8", errors="ignore") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                parts = line.split("\t")
+                rec_field = ""
+                norec_field = ""
+                begfin_field = ""
+                for p in parts:
+                    p = p.strip()
+                    if p.startswith("Rec:"):
+                        rec_field = p[len("Rec:"):].strip()
+                    elif p.startswith("No_Rec:"):
+                        norec_field = p[len("No_Rec:"):].strip()
+                    elif p.startswith("BegFin_Reads:"):
+                        begfin_field = p[len("BegFin_Reads:"):].strip()
+
+                if _field_has_zero_coord(rec_field) or _field_has_zero_coord(norec_field):
+                    return False
+                if _begfin_has_zero_coord(begfin_field):
+                    return False
+    except OSError:
+        pass
+    return True
+
+
+def _parse_pairs(field: str, expect_big: bool = True, *, one_based: bool = True):
     """
     Parsea un campo tipo 'Rec' o 'No_Rec' en una lista de:
         (pA, pB, bigger, mireads, minfreq)
@@ -76,6 +146,13 @@ def _parse_pairs(field: str, expect_big: bool = True):
             pA = int(parts[0])
             pB = int(parts[1])
         except (ValueError, IndexError):
+            continue
+
+        if one_based:
+            pA -= 1
+            pB -= 1
+
+        if pA < 0 or pB < 0:
             continue
 
         bigger = 1
@@ -122,6 +199,8 @@ def _load_events(results_path: str) -> pd.DataFrame:
     if not os.path.exists(results_path):
         raise FileNotFoundError(f"Results file not found: {results_path}")
 
+    one_based = _is_one_based_results(results_path)
+
     # --- Pequeño "sniff" para evitar leer con pandas los resultados SRARec gigantes ---
     # Si detectamos un formato clásico de SRARec (Sra:/Rec:/No_Rec:), NO usamos read_csv,
     # y pasamos directamente al parser línea a línea (mucho más ligero en RAM).
@@ -155,6 +234,10 @@ def _load_events(results_path: str) -> pd.DataFrame:
             events["pB"] = pd.to_numeric(events["pB"], errors="coerce")
             events["true"] = pd.to_numeric(events["true"], errors="coerce").fillna(0).astype(int)
             events = events.dropna(subset=["pA", "pB"])
+            if one_based:
+                events["pA"] = events["pA"] - 1
+                events["pB"] = events["pB"] - 1
+                events = events[(events["pA"] >= 0) & (events["pB"] >= 0)]
             return events
 
         # Caso 2: columnas Rec / No_Rec
@@ -164,10 +247,14 @@ def _load_events(results_path: str) -> pd.DataFrame:
                 rec_field = row.get("Rec", "")
                 norec_field = row.get("No_Rec", "")
 
-                for (pA, pB, bigger, mireads, minfreq) in _parse_pairs(rec_field, expect_big=True):
+                for (pA, pB, bigger, mireads, minfreq) in _parse_pairs(
+                    rec_field, expect_big=True, one_based=one_based
+                ):
                     rows.append((pA, pB, 1))
 
-                for (pA, pB, bigger, mireads, minfreq) in _parse_pairs(norec_field, expect_big=False):
+                for (pA, pB, bigger, mireads, minfreq) in _parse_pairs(
+                    norec_field, expect_big=False, one_based=one_based
+                ):
                     rows.append((pA, pB, 0))
 
             if rows:
@@ -200,11 +287,15 @@ def _load_events(results_path: str) -> pd.DataFrame:
                     norec_field = p[len("No_Rec:"):].strip()
 
             if rec_field:
-                for (pA, pB, bigger, mireads, minfreq) in _parse_pairs(rec_field, expect_big=True):
+                for (pA, pB, bigger, mireads, minfreq) in _parse_pairs(
+                    rec_field, expect_big=True, one_based=one_based
+                ):
                     rows.append((pA, pB, 1, sra_id))
 
             if norec_field:
-                for (pA, pB, bigger, mireads, minfreq) in _parse_pairs(norec_field, expect_big=False):
+                for (pA, pB, bigger, mireads, minfreq) in _parse_pairs(
+                    norec_field, expect_big=False, one_based=one_based
+                ):
                     rows.append((pA, pB, 0, sra_id))
 
     if rows:
@@ -305,6 +396,7 @@ def _compute_coverage_from_begfin(results_path: str, genome_len: int) -> np.ndar
     if genome_len is None or genome_len <= 0:
         return np.zeros(0, dtype=float)
 
+    one_based = _is_one_based_results(results_path)
     cov = np.zeros(int(genome_len) + 2, dtype=np.int64)
 
     try:
@@ -339,6 +431,10 @@ def _compute_coverage_from_begfin(results_path: str, genome_len: int) -> np.ndar
                         end = int(end_str)
                     except ValueError:
                         continue
+
+                    if one_based:
+                        start -= 1
+                        end -= 1
 
                     # Asegurar límites dentro del genoma
                     if end < 0 or start >= genome_len:
@@ -380,6 +476,7 @@ def _compute_begfin_concentration(results_path: str, genome_len: int) -> np.ndar
     if genome_len is None or genome_len <= 0:
         return np.zeros(0, dtype=float)
 
+    one_based = _is_one_based_results(results_path)
     concentration = np.zeros(int(genome_len), dtype=np.int64)
 
     try:
@@ -414,6 +511,10 @@ def _compute_begfin_concentration(results_path: str, genome_len: int) -> np.ndar
                         end = int(end_str)
                     except ValueError:
                         continue
+
+                    if one_based:
+                        start -= 1
+                        end -= 1
 
                     # Asegurar límites dentro del genoma
                     if end < 0 or start >= genome_len:
@@ -704,7 +805,7 @@ def compute_recombination_profile(events: pd.DataFrame,
     with np.errstate(divide="ignore", invalid="ignore"):
         rho = np.where(tot > 0.0, alpha * pos_t / tot, 0.0)
 
-    positions = np.arange(genome_len, dtype=int)
+    positions = np.arange(1, genome_len + 1, dtype=int)
     return positions, rho
 
 # ---------------------------------------------------------------------------
@@ -746,10 +847,9 @@ def _generate_matplotlib_figure(
     # Asegurar que la rejilla quede por detrás de las líneas de datos
     ax.set_axisbelow(True)
     
-    # Dibujar línea de recombinación
-    # Usar positions[1:] para empezar desde posición 1 (como en el script original)
-    x = positions[1:] if len(positions) > 1 else positions
-    rho_plot = rho[1:] if len(rho) > 1 else rho
+    # Posiciones 1-based en el eje X
+    x = positions
+    rho_plot = rho
     
     max_rho = float(np.max(rho_plot)) if rho_plot.size else 0.0
     if max_rho <= 0:
@@ -773,7 +873,7 @@ def _generate_matplotlib_figure(
     # Añadir línea de cobertura si está disponible (por encima de la línea azul)
     if coverage is not None and coverage.size > 0:
         # Escalar la cobertura para que se vea en el mismo rango
-        coverage_plot = coverage[1:] if len(coverage) > 1 else coverage
+        coverage_plot = coverage
         cov_len = min(len(coverage_plot), len(x))
         if cov_len > 0:
             coverage_scaled = coverage_plot[:cov_len]
@@ -789,7 +889,7 @@ def _generate_matplotlib_figure(
     # Añadir línea de concentración de inicios/fin de reads si está disponible (por encima de la línea azul)
     if begfin_concentration is not None and begfin_concentration.size > 0:
         # Escalar la concentración para que se vea en el mismo rango
-        concentration_plot = begfin_concentration[1:] if len(begfin_concentration) > 1 else begfin_concentration
+        concentration_plot = begfin_concentration
         conc_len = min(len(concentration_plot), len(x))
         if conc_len > 0:
             concentration_scaled = concentration_plot[:conc_len]
