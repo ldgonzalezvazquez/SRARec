@@ -20,7 +20,7 @@ It supports **Illumina**, **Oxford Nanopore Technologies (ONT)** and **PacBio** 
 > For analyses associated with the **CoViE study**, use the `Exclusive_CoViE` branch.
 
 > **macOS users — BAM analysis without the terminal**  
-> Download the **[SRARec Desktop release](https://github.com/ldgonzalezvazquez/SRARec/tree/main/Releases)** and run **`Install SRARec Desktop.command`** (free, no Apple Developer account). See [SRARec Desktop](#srarec-desktop-macos-gui).
+> **[Download SRARec Desktop](https://media.githubusercontent.com/media/ldgonzalezvazquez/SRARec/main/Releases/SRARec-Desktop-1.0.0-macos.zip)** (~300 MB). Unzip, then double-click `Install SRARec Desktop.command`. See [SRARec Desktop](#srarec-desktop-macos-gui).
 
 ---
 
@@ -854,16 +854,9 @@ The script also computes read start/end concentration curves used in the HTML an
 
 ### Download (macOS)
 
-Release files are stored in this repository (via **Git LFS**), under [`Releases/`](Releases/):
+**[Download SRARec Desktop 1.0.0 (zip)](https://media.githubusercontent.com/media/ldgonzalezvazquez/SRARec/main/Releases/SRARec-Desktop-1.0.0-macos.zip)** (~300 MB)
 
-| File | Purpose |
-|---|---|
-| `SRARec-Desktop-1.0.0-macos.zip` | **Recommended** — archive + one-click installer |
-| `Install SRARec Desktop.command` | Removes Gatekeeper quarantine and installs the app (free; no Apple Developer account) |
-| `SRARec-Desktop-1.0.0-macos.tar.gz` | App bundle only (~301 MB) |
-
-> Open each file on GitHub and click **Download** (top-right of the file view).  
-> Do **not** use a `raw.githubusercontent.com` link for LFS files.
+The archive contains the app bundle and a one-click installer script. The file is stored in this repository via **Git LFS** ([`Releases/`](Releases/)).
 
 | Requirement | Detail |
 |---|---|
@@ -873,37 +866,14 @@ Release files are stored in this repository (via **Git LFS**), under [`Releases/
 
 ### Installation
 
-macOS adds a **quarantine flag** to files downloaded from a browser. That is what triggers *"SRARec Desktop is damaged"* — the app is not corrupted. These options avoid paying for Apple notarization ($99/year).
+1. **Download** the zip file using the link above (your browser should start the download immediately).
+2. **Unzip** the archive.
+3. **Double-click** `Install SRARec Desktop.command`.
+4. If macOS blocks the installer, open **System Settings → Privacy & Security** and click **Open Anyway**. Confirm if prompted. The installer will then run automatically in Terminal.
+5. The script removes the macOS download block, installs **SRARec Desktop** in **Applications**, and launches the app.
+6. Once installation is complete, you can delete the unzipped folder and the downloaded `.zip` file.
 
-#### Option A — One-click installer (recommended for browser downloads)
-
-1. Download and unzip `SRARec-Desktop-1.0.0-macos.zip`.
-2. **Right-click** `Install SRARec Desktop.command` → **Open** → **Open** (only needed once; macOS blocks unsigned helper scripts on first run).
-3. The installer strips quarantine, copies the app to `/Applications/`, and launches it.
-
-#### Option B — Git clone (no quarantine at all)
-
-Files obtained with `git` are **not** quarantined, so Gatekeeper does not block the app:
-
-```bash
-git clone https://github.com/ldgonzalezvazquez/SRARec.git
-cd SRARec
-git lfs pull
-tar -xzf Releases/SRARec-Desktop-1.0.0-macos.tar.gz
-mv "SRARec Desktop.app" /Applications/
-```
-
-#### Option C — Manual Terminal (single `.tar.gz` download)
-
-```bash
-cd ~/Downloads
-xattr -cr SRARec-Desktop-1.0.0-macos.tar.gz
-tar -xzf SRARec-Desktop-1.0.0-macos.tar.gz
-xattr -cr "SRARec Desktop.app"
-mv "SRARec Desktop.app" /Applications/
-```
-
-If macOS still blocks the app, open **System Settings → Privacy & Security** → **Open Anyway**, or right-click the app → **Open**.
+If you have any trouble installing, contact us at **luisdaniel.gonzalez@uvigo.es** or **luisde365@gmail.com**.
 
 ### Quick start
 
