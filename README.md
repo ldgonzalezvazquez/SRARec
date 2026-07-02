@@ -20,7 +20,7 @@ It supports **Illumina**, **Oxford Nanopore Technologies (ONT)** and **PacBio** 
 > For analyses associated with the **CoViE study**, use the `Exclusive_CoViE` branch.
 
 > **macOS users — BAM analysis without the terminal**  
-> Download **[SRARec Desktop](releases/SRARec-Desktop-1.0.0.dmg)** (`.dmg`, ~362 MB). See [SRARec Desktop](#srarec-desktop-macos-gui).
+> Download **[SRARec Desktop](https://github.com/ldgonzalezvazquez/SRARec/blob/main/Releases/SRARec-Desktop-1.0.0-macos.tar.gz)** (`.tar.gz`, ~301 MB). See [SRARec Desktop](#srarec-desktop-macos-gui).
 
 ---
 
@@ -854,15 +854,12 @@ The script also computes read start/end concentration curves used in the HTML an
 
 ### Download (macOS)
 
-The installer is included in this repository:
+The installer is stored in this repository (via **Git LFS**):
 
-**[SRARec Desktop 1.0.0 — macOS installer (DMG)](releases/SRARec-Desktop-1.0.0.dmg)** (~362 MB)
+**[SRARec Desktop 1.0.0 — macOS archive (tar.gz)](https://github.com/ldgonzalezvazquez/SRARec/blob/main/Releases/SRARec-Desktop-1.0.0-macos.tar.gz)** (~301 MB)
 
-Direct link (after cloning or browsing on GitHub):
-
-```text
-https://github.com/ldgonzalezvazquez/SRARec/raw/main/releases/SRARec-Desktop-1.0.0.dmg
-```
+> Open the link on GitHub and click **Download** (top-right of the file view).  
+> Do **not** use a `raw.githubusercontent.com` link for LFS files.
 
 | Requirement | Detail |
 |---|---|
@@ -872,9 +869,22 @@ https://github.com/ldgonzalezvazquez/SRARec/raw/main/releases/SRARec-Desktop-1.0
 
 ### Installation
 
-1. Download `SRARec-Desktop-1.0.0.dmg` from the link above.
-2. Open the DMG and drag **SRARec Desktop** to **Applications**.
-3. On first launch, macOS may block the app because it is not notarized. Open **System Settings → Privacy & Security** and choose **Open Anyway**.
+1. Download `SRARec-Desktop-1.0.0-macos.tar.gz` from the link above.
+2. Extract and move the app to **Applications**:
+
+```bash
+cd ~/Downloads
+tar -xzf SRARec-Desktop-1.0.0-macos.tar.gz
+mv "SRARec Desktop.app" /Applications/
+```
+
+3. macOS may block the app because it is not notarized. Remove the download quarantine flag:
+
+```bash
+xattr -cr "/Applications/SRARec Desktop.app"
+```
+
+4. Launch **SRARec Desktop** from Applications. If macOS still blocks it, open **System Settings → Privacy & Security** and choose **Open Anyway**, or right-click the app → **Open**.
 
 ### Quick start
 
