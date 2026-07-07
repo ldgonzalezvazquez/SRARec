@@ -50,7 +50,7 @@ python3 SRARec1.3.py example --bam
 1. Install [SRARec Desktop](https://github.com/ldgonzalezvazquez/SRARec/releases/download/desktop-1.0.0/SRARec-Desktop-1.0.0-macos.zip) (see the main [README](../README.md#srarec-desktop-macos)).
 2. Launch **SRARec Desktop**.
 3. Click **Add BAMs...** and select `example.bam`.
-4. Choose platform and reference (SARS-CoV-2 or ILLUMINA), set an output folder, and click **Run analysis**.
+4. Choose platform and reference (SARS-CoV-2 and ILLUMINA), set an output folder, and click **Run analysis**.
 5. When finished, use **Regenerate graph** or **Save graph** to export the recombination profile.
 
 The BAM must be coordinate-sorted; a `.bai` index is optional (the app can create it).
