@@ -1655,6 +1655,11 @@ if __name__ == "__main__":
              "to display genes below the recombination profile. "
              "If omitted, uses the GenBank file bundled under reference_indexes/ for --virus.",
     )
+    p.add_argument(
+        "--no-annotation",
+        action="store_true",
+        help="Plot recombination and coverage tracks only (no gene track or gene legend).",
+    )
     p.add_argument("--gene-track-label", type=str, default="Genes",
                    help="Label for the gene track (default: 'Genes').")
     p.add_argument("--no-coverage", action="store_true",
@@ -1671,12 +1676,14 @@ if __name__ == "__main__":
     if not results_path.is_file():
         raise FileNotFoundError(f"[ERROR] Missing required file: {results_path}")
 
-    if args.annotation:
-        annotation_path = Path(args.annotation)
-    else:
-        annotation_path = _builtin_annotation_path(script_dir, args.virus)
-    if not annotation_path.is_file():
-        raise FileNotFoundError(f"[ERROR] Missing required file: {annotation_path}")
+    annotation_path = None
+    if not args.no_annotation:
+        if args.annotation:
+            annotation_path = Path(args.annotation)
+        else:
+            annotation_path = _builtin_annotation_path(script_dir, args.virus)
+        if not annotation_path.is_file():
+            raise FileNotFoundError(f"[ERROR] Missing required file: {annotation_path}")
 
     if args.output:
         output_html = Path(args.output)
@@ -1689,7 +1696,7 @@ if __name__ == "__main__":
         output_html=str(output_html),
         alpha=args.alpha,
         genome_len=args.genome_len,
-        annotation_path=str(annotation_path),
+        annotation_path=str(annotation_path) if annotation_path else None,
         gene_track_label=args.gene_track_label,
         skip_coverage=args.no_coverage,
         skip_begfin_concentration=args.no_begfin_concentration,

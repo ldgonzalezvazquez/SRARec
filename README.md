@@ -23,6 +23,7 @@ Built-in references: **SARS-CoV-2** (`NC_045512.2`) and **HIV-1** (`NC_001802.1`
 
 - [Quick start](#quick-start)
 - [Installation](#installation)
+- [Example data](#example-data)
 - [How to run](#how-to-run)
 - [Interpreting results](#interpreting-results)
 - [Plotting recombination profiles](#plotting-recombination-profiles)
@@ -48,11 +49,13 @@ cd SRARec
 conda env create -f environment.yml
 conda activate srarec
 
-# 3. Run a standard SARS-CoV-2 analysis from SRA
-python3 SRARec1.3.py SRRXXXXXXXX --slow
+# 3. Run an analysis (SRA accession or local files in examples/ — see below)
+python3 SRARec1.3.py ERR13573889 --slow
 
 # 4. Generate an interactive recombination profile
 python3 generate_graphs.py results_slow.txt --virus sars-cov-2 --exclusive-positions
+# Without gene annotation (no reference .gb required):
+python3 generate_graphs.py results_slow.txt --no-annotation --exclusive-positions
 ```
 
 For HIV-1, add `--virus hiv`.
@@ -120,6 +123,45 @@ python3 SRARec1.3.py --help
 python3 generate_graphs.py --help
 ```
 
+---
+
+## Example data
+
+The `examples/` directory holds **local test files**. Download them from GitHub:
+
+**[github.com/ldgonzalezvazquez/SRARec/tree/main/examples](https://github.com/ldgonzalezvazquez/SRARec/tree/main/examples)**
+
+| File | Use |
+|---|---|
+| `examples/example_1.fastq` | Forward reads |
+| `examples/example_2.fastq` | Reverse reads |
+| `examples/example.bam` | Pre-mapped BAM (also for [SRARec Desktop](#srarec-desktop-macos)) |
+
+See [`examples/README.md`](examples/README.md) for commands and the BAM naming convention (`{folder_name}.bam` inside the sample folder).
+
+**Paired-end FASTQ:**
+
+```bash
+python3 SRARec1.3.py --fastq examples/example_1.fastq examples/example_2.fastq example_run \
+  --slow --platform ILLUMINA
+```
+
+**BAM** (if the BAM is `examples/example.bam`, use folder `example` with `example/example.bam`, or rename to `examples/examples.bam` — details in `examples/README.md`):
+
+```bash
+python3 SRARec1.3.py example --bam
+```
+
+**SRA accessions** — you can also test without local files. Example runs:
+
+`ERR13573889` · `ERR13020098` · `ERR11859871` · `ERR10430152` · `ERR10304387`
+
+```bash
+python3 SRARec1.3.py ERR13573889 --slow
+```
+
+Platform is auto-detected from SRA metadata for SRA accessions.
+
 ### Repository layout
 
 ```text
@@ -127,6 +169,11 @@ SRARec/
 ├── SRARec1.3.py              # Main analysis script
 ├── generate_graphs.py        # Recombination profile plots
 ├── environment.yml           # Conda environment
+├── examples/                 # Local test data (see examples/README.md)
+│   ├── README.md
+│   ├── example_1.fastq       # download from GitHub examples/
+│   ├── example_2.fastq       # download from GitHub examples/
+│   └── example.bam           # download from GitHub examples/
 ├── reference_indexes/
 │   ├── sars_cov_2/           # SARS-CoV-2 FASTA, indexes and NC_045512.2.gb
 │   ├── hiv_1/                # HIV-1 FASTA, indexes, NC_001802.1.gb and K03455.1_MOD.gb
@@ -241,17 +288,23 @@ To ignore indels, add `--noindel` — recommended for samples with high diversit
 
 ```bash
 # SARS-CoV-2 from SRA (default search thresholds)
-python3 SRARec1.3.py SRRXXXXXXXX --slow
+python3 SRARec1.3.py ERR13573889 --slow
 
 # HIV-1 from SRA
-python3 SRARec1.3.py SRRXXXXXXXX --slow --virus hiv
+python3 SRARec1.3.py ERR13020098 --slow --virus hiv
+
+# Local paired-end FASTQ (files in examples/)
+python3 SRARec1.3.py --fastq examples/example_1.fastq examples/example_2.fastq example_run \
+  --slow --platform ILLUMINA
 
 # Local ONT reads (--platform required for mapping)
 python3 SRARec1.3.py --fastq reads.fastq my_sample --slow --platform ONT
 
 # BAM-based analysis (--platform optional; only written to the Platform field)
-python3 SRARec1.3.py my_sample --bam
+python3 SRARec1.3.py example --bam
 ```
+
+Other example SRA accessions: `ERR11859871`, `ERR10430152`, `ERR10304387`.
 
 ---
 
@@ -359,6 +412,10 @@ Bundled GenBank annotations live under `reference_indexes/`:
 | `hiv` | `reference_indexes/hiv_1/NC_001802.1.gb` |
 | `hxb2` | `reference_indexes/hiv_1/K03455.1_MOD.gb` |
 
+The default HIV-1 mapping reference is **NC_001802.1** (`--virus hiv`). Use **`--virus hxb2`** when positions in your results file are on **HXB2** (K03455) coordinates — for example, after analysing a BAM aligned to HXB2, or after adapting SHIVER output coordinates using SHIVER's correspondence files (see [SHIVER workflow](#optional-hiv-workflow-spades--shiver)).
+
+You can also plot **without any annotation** using **`--no-annotation`**: the recombination and coverage profiles are still drawn, but no gene track or gene legend is shown. This is useful when coordinates do not match a bundled reference (e.g. sample-specific SHIVER references) or when you only need the ρ profile.
+
 ### Examples
 
 Always include `--exclusive-positions` to prevent true and false signals from overlapping at the same genomic position.
@@ -367,8 +424,14 @@ Always include `--exclusive-positions` to prevent true and false signals from ov
 # SARS-CoV-2 profile (default annotation)
 python3 generate_graphs.py results_slow.txt --virus sars-cov-2 --exclusive-positions
 
-# HIV-1 profile
+# HIV-1 profile (NC_001802.1 — default built-in reference)
 python3 generate_graphs.py results_slow.txt --virus hiv --exclusive-positions
+
+# HIV-1 profile when results are on HXB2 (K03455) coordinates
+python3 generate_graphs.py results_slow.txt --virus hxb2 --exclusive-positions
+
+# Profile without gene annotation (no gene track or legend)
+python3 generate_graphs.py results_slow.txt --no-annotation --exclusive-positions
 
 # Custom output path
 python3 generate_graphs.py results_bam.txt -o output/my_profile.html \
@@ -394,8 +457,9 @@ python3 generate_graphs.py results_slow.txt --exclusive-positions \
 |---|---|
 | `results_txt` | SRARec results file |
 | `-o`, `--output` | Output HTML path |
-| `--virus` | Built-in annotation selector (`sars-cov-2`, `hiv`, `hxb2`) |
+| `--virus` | Built-in annotation selector (`sars-cov-2`, `hiv`, `hxb2`); ignored with `--no-annotation` |
 | `--annotation` | Custom GenBank or GFF3 file |
+| `--no-annotation` | Skip gene track and gene legend (recombination/coverage only) |
 | `--alpha` | Scaling factor for ρ (default: `1.0`) |
 | `--exclusive-positions` | **Recommended.** Avoid true/false signal overlap at the same position |
 | `--aggregate-by-patient` | Aggregate events by sample before summing |
@@ -459,6 +523,26 @@ python3 SRARec1.3.py --fastq --use_shiver_assembly \
   --shiver_adapters complementary_data/adapters.fa \
   --shiver_primers complementary_data/adapters.fa
 ```
+
+**Coordinates and plotting.** SHIVER builds a **sample-specific reference** (`{sample}_ref.fasta`) and SRARec reports recombination positions in `results_*.txt` relative to that reference.
+
+By default, [SHIVER](https://github.com/ChrisHIV/shiver) also writes a **correspondence between the sample-specific reference and HXB2** for coordinate adaptation. The main files are:
+
+| SHIVER output | Role |
+|---|---|
+| `{sample}_BaseFreqs_WithHXB2.csv` | Base frequencies with an HXB2 coordinate column (pairwise alignment of the mapping reference to HXB2) |
+| `{sample}_coords.csv` | Dictionary mapping positions on the sample reference to the global reference alignment |
+| `{sample}_BaseFreqs_ForGlobalAln.csv` | Base frequencies with global-alignment coordinates |
+
+These files are produced when `GiveHXB2coords=true` in SHIVER's `config.sh` (the default for HIV). See the [SHIVER repository](https://github.com/ChrisHIV/shiver) and the [SHIVER manual](https://github.com/ChrisHIV/shiver/blob/master/docs/ShiverManual.pdf) for full details on coordinate translation and downstream use.
+
+**SRARec does not automatically remap** `Rec`/`No_Rec`/`BegFin_Reads` in `results_*.txt` to HXB2. When coinfection is detected, SRARec only moves `{sample}_BaseFreqs_WithHXB2.csv` to `csv_with_HXB2/` (along with `{sample}_ref.fasta` to `ref_fasta/`). To plot with HXB2 gene annotations, adapt recombination coordinates using SHIVER's correspondence first, then pass **`--virus hxb2`** to `generate_graphs.py`.
+
+To plot SHIVER output without coordinate adaptation:
+
+- **`--no-annotation`** — profile without genes (recommended if positions are still on the sample-specific reference).
+
+See [Plotting recombination profiles](#plotting-recombination-profiles).
 
 ---
 

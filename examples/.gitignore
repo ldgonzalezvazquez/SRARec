@@ -1,0 +1,7 @@
+# Example data files are too large for Git — add them locally (see README.md)
+*.bam
+*.bai
+*.fastq
+*.fq
+*.fastq.gz
+*.fq.gz
