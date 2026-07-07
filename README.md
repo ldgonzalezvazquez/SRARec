@@ -624,7 +624,7 @@ https://doi.org/10.48550/arXiv.1303.3997)
 
 11. Bushnell B, Rood J, Singer E. BBMerge – Accurate paired shotgun read merging via overlap. *PLoS ONE*. 2017;12(10):e0185056. doi:[10.1371/journal.pone.0185056](https://doi.org/10.1371/journal.pone.0185056)
 
-12. Kans J. Entrez Direct: E-utilities on the Unix command line. In: *Entrez Programming Utilities Help*. Bethesda (MD): National Center for Biotechnology Information (US); 2010. [ncbi.nlm.nih.gov/books/](/https://www.ncbi.nlm.nih.gov/books/NBK25501/)
+12. Kans J. Entrez Direct: E-utilities on the Unix command line. In: *Entrez Programming Utilities Help*. Bethesda (MD): National Center for Biotechnology Information (US); 2010. [ncbi.nlm.nih.gov/books/](https://www.ncbi.nlm.nih.gov/books/NBK25501/)
 
 External resources:
 
