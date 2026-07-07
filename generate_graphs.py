@@ -535,6 +535,33 @@ def _compute_begfin_concentration(results_path: str, genome_len: int) -> np.ndar
 
 
 # ---------------------------------------------------------------------------
+# Anotaciones GenBank incluidas en el repositorio
+# ---------------------------------------------------------------------------
+
+def _builtin_annotation_path(script_dir: Path, virus: str = "sars-cov-2") -> Path:
+    """Ruta al GenBank incluido para referencias integradas."""
+    key = str(virus).lower().replace("_", "-")
+    annotations = {
+        "sars-cov-2": script_dir / "reference_indexes" / "sars_cov_2" / "NC_045512.2.gb",
+        "sarscov2": script_dir / "reference_indexes" / "sars_cov_2" / "NC_045512.2.gb",
+        "covid": script_dir / "reference_indexes" / "sars_cov_2" / "NC_045512.2.gb",
+        "covid-19": script_dir / "reference_indexes" / "sars_cov_2" / "NC_045512.2.gb",
+        "hiv": script_dir / "reference_indexes" / "hiv_1" / "NC_001802.1.gb",
+        "hiv-1": script_dir / "reference_indexes" / "hiv_1" / "NC_001802.1.gb",
+        "hiv1": script_dir / "reference_indexes" / "hiv_1" / "NC_001802.1.gb",
+        "vih": script_dir / "reference_indexes" / "hiv_1" / "NC_001802.1.gb",
+        "vih-1": script_dir / "reference_indexes" / "hiv_1" / "NC_001802.1.gb",
+        "hxb2": script_dir / "reference_indexes" / "hiv_1" / "K03455.1_MOD.gb",
+        "k03455": script_dir / "reference_indexes" / "hiv_1" / "K03455.1_MOD.gb",
+    }
+    path = annotations.get(key)
+    if path is None:
+        known = ", ".join(sorted(set(annotations)))
+        raise ValueError(f"Unknown built-in virus for annotation: {virus}. Known: {known}")
+    return path
+
+
+# ---------------------------------------------------------------------------
 # Carga de genes desde anotación NCBI (GenBank o GFF3)
 # ---------------------------------------------------------------------------
 
@@ -1601,7 +1628,6 @@ if __name__ == "__main__":
     import argparse
     script_dir = Path(__file__).resolve().parent
     default_results = script_dir / "results_slow.txt"
-    default_annotation = script_dir / "NC_045512.2.gb"
     output_dir = script_dir / "output"
 
     p = argparse.ArgumentParser(
@@ -1614,10 +1640,21 @@ if __name__ == "__main__":
                    help="Scaling factor for ρ (default: 1.0)")
     p.add_argument("--genome-len", type=int, default=None,
                    help="Genome length (if omitted, inferred from events)")
-    p.add_argument("--annotation", type=str, default=str(default_annotation),
-                   help="NCBI annotation file (GenBank .gb/.gbff or GFF3 .gff/.gff3) "
-                        "to display genes below the recombination profile "
-                        "(default: NC_045512.2.gb in script dir).")
+    p.add_argument(
+        "--virus",
+        type=str,
+        default="sars-cov-2",
+        help="Built-in reference for bundled GenBank annotation: sars-cov-2 (default), hiv, or hxb2. "
+             "Ignored when --annotation is set.",
+    )
+    p.add_argument(
+        "--annotation",
+        type=str,
+        default=None,
+        help="NCBI annotation file (GenBank .gb/.gbff or GFF3 .gff/.gff3) "
+             "to display genes below the recombination profile. "
+             "If omitted, uses the GenBank file bundled under reference_indexes/ for --virus.",
+    )
     p.add_argument("--gene-track-label", type=str, default="Genes",
                    help="Label for the gene track (default: 'Genes').")
     p.add_argument("--no-coverage", action="store_true",
@@ -1634,8 +1671,11 @@ if __name__ == "__main__":
     if not results_path.is_file():
         raise FileNotFoundError(f"[ERROR] Missing required file: {results_path}")
 
-    annotation_path = Path(args.annotation) if args.annotation else None
-    if annotation_path is None or not annotation_path.is_file():
+    if args.annotation:
+        annotation_path = Path(args.annotation)
+    else:
+        annotation_path = _builtin_annotation_path(script_dir, args.virus)
+    if not annotation_path.is_file():
         raise FileNotFoundError(f"[ERROR] Missing required file: {annotation_path}")
 
     if args.output:

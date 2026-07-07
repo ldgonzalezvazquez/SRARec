@@ -1,705 +1,265 @@
 # SRARec
 
-[![Python](https://img.shields.io/badge/Python-3.x-blue.svg)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.10-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](#srarec-desktop-macos-gui)
+[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20Windows-lightgrey.svg)](#srarec-desktop-macos)
 [![Version](https://img.shields.io/badge/version-1.3-green.svg)](#citation)
 
-**SRARec** is an open-source Python tool for detecting read-supported recombination-compatible signals from high-throughput sequencing data. It implements a read-level version of the **four-gamete test**, allowing recombination signal to be evaluated from physically linked variants observed within sequencing reads.
+**SRARec** is an open-source Python tool for detecting read-supported recombination-compatible signals from high-throughput sequencing data.
 
-SRARec can analyse data from:
+It accepts **NCBI-SRA accessions**, local **FASTQ** files, or preprocessed **BAM** files, and supports **Illumina**, **Oxford Nanopore (ONT)** and **PacBio** data (single-end and paired-end).
 
-- **NCBI Sequence Read Archive (SRA)** accessions;
-- local **FASTQ** files;
-- precomputed **BAM** files;
-- optional HIV-focused sample-specific assembly workflows using **rnaviralSPAdes** and **SHIVER**.
+Built-in references: **SARS-CoV-2** (`NC_045512.2`) and **HIV-1** (`NC_001802.1`). Custom references are also supported.
 
-It supports **Illumina**, **Oxford Nanopore Technologies (ONT)** and **PacBio** data, including both **single-end** and **paired-end** reads.
+> **macOS — analyse BAM files without the terminal**  
+> [Download SRARec Desktop](https://github.com/ldgonzalezvazquez/SRARec/releases/download/desktop-1.0.0/SRARec-Desktop-1.0.0-macos.zip) (~300 MB). See [SRARec Desktop](#srarec-desktop-macos).
 
-> **Project note**  
-> For analyses associated with the **CoViE study**, use the `Exclusive_CoViE` branch.
-
-> **macOS users — BAM analysis without the terminal**  
-> **[Download SRARec Desktop](https://github.com/ldgonzalezvazquez/SRARec/releases/download/desktop-1.0.0/SRARec-Desktop-1.0.0-macos.zip)** (~300 MB). Unzip, then double-click `Install SRARec Desktop.command`. See [SRARec Desktop](#srarec-desktop-macos-gui).
+> **CoViE study**  
+> Large-scale analyses from the CoViE project are kept on the `Exclusive_CoViE` branch. This repository documents the tool only.
 
 ---
 
 ## Table of contents
 
-- [Overview](#overview)
-- [How SRARec works](#how-srarec-works)
-- [How to install](#how-to-install)
-  - [1. Clone the repository](#1-clone-the-repository)
-  - [2. Create the Conda environment](#2-create-the-conda-environment)
-  - [3. Install external dependencies](#3-install-external-dependencies)
-  - [4. Check the installation](#4-check-the-installation)
-- [How to run SRARec](#how-to-run-srarec)
-  - [Step 1. Choose the reference genome](#step-1-choose-the-reference-genome)
-  - [Step 2. Choose the input type](#step-2-choose-the-input-type)
-  - [Step 3. Choose the analysis mode](#step-3-choose-the-analysis-mode)
-  - [Step 4. Choose detection thresholds](#step-4-choose-detection-thresholds)
-- [Usage examples](#usage-examples)
-- [Command-line reference](#command-line-reference)
-- [Optional HIV assembly-based workflow](#optional-hiv-assembly-based-workflow)
-- [Outputs](#outputs)
+- [Quick start](#quick-start)
+- [Installation](#installation)
+- [How to run](#how-to-run)
+- [Interpreting results](#interpreting-results)
 - [Plotting recombination profiles](#plotting-recombination-profiles)
-- [SRARec Desktop (macOS GUI)](#srarec-desktop-macos-gui)
-- [Method summary](#method-summary)
-- [Validation](#validation)
-- [Large-scale analyses](#large-scale-analyses)
+- [SRARec Desktop (macOS)](#srarec-desktop-macos)
+- [Optional HIV workflow (SPAdes + SHIVER)](#optional-hiv-workflow-spades--shiver)
+- [Command-line reference](#command-line-reference)
 - [Limitations](#limitations)
 - [Citation](#citation)
+- [References](#references)
 - [License](#license)
-- [References and external tools](#references-and-external-tools)
 - [Contact](#contact)
 
 ---
 
-## Overview
+## Quick start
 
-SRARec was developed to detect recombination-compatible patterns directly from sequencing reads. Instead of relying only on consensus genomes, the program examines how variants are linked within individual reads and tests whether pairs of polymorphic positions show all four possible allele combinations.
+```bash
+# 1. Clone and enter the repository
+git clone https://github.com/ldgonzalezvazquez/SRARec.git
+cd SRARec
 
-This makes SRARec useful for viral sequencing datasets where recombination may be present within mixed infections, intra-host diversity, heterogeneous samples or public sequencing datasets.
+# 2. Create the environment (recommended)
+conda env create -f environment.yml
+conda activate srarec
 
-SRARec reports **read-supported recombination-compatible signals**. These signals should be interpreted together with sequencing depth, read length, mapping quality, genetic diversity, amplicon design and biological context.
+# 3. Run a standard SARS-CoV-2 analysis from SRA
+python3 SRARec1.3.py SRRXXXXXXXX --slow
 
----
-
-## How SRARec works
-
-```text
-Input data
-  ├── NCBI-SRA accession
-  ├── Local FASTQ files
-  └── Local BAM file
-        │
-        ▼
-Read preprocessing
-  ├── SRA download and FASTQ conversion, if required
-  ├── paired-end read repair, if required
-  └── adapter trimming
-        │
-        ▼
-Mapping to reference genome
-  ├── BWA-MEM for Illumina
-  └── minimap2 for ONT / PacBio
-        │
-        ▼
-BAM processing and filtering
-  ├── sorting and indexing
-  ├── mate fixing for paired-end data
-  ├── duplicate removal
-  ├── mapping-quality filtering
-  └── aligned-read-fraction filtering
-        │
-        ▼
-Candidate polymorphic-site detection
-  └── positions with at least two variants and enough read support
-        │
-        ▼
-Read-level variant extraction
-  └── linked substitutions and/or indels across polymorphic sites
-        │
-        ▼
-Four-gamete test
-  ├── recombination-compatible pairs
-  └── non-recombinant-compatible pairs
-        │
-        ▼
-Outputs
-  ├── results_<mode>.txt
-  ├── recombinant-compatible events
-  ├── non-recombinant pair log
-  ├── read start/end information
-  ├── optional VCFs for potential coinfections
-  └── genome-wide recombination profiles
+# 4. Generate an interactive recombination profile
+python3 generate_graphs.py results_slow.txt --virus sars-cov-2 --exclusive-positions
 ```
 
+For HIV-1, add `--virus hiv`.
+
 ---
 
-## How to install
+## Installation
 
 ### 1. Clone the repository
 
 ```bash
-git clone <SRARec-repository-url>
+git clone https://github.com/ldgonzalezvazquez/SRARec.git
 cd SRARec
 ```
 
 ### 2. Create the Conda environment
 
-Create and activate a dedicated environment:
-
-```bash
-conda create -n srarec python=3.10
-conda activate srarec
-```
-
-
-The environment can alternatively be created with the 'environment.yml' file:
+**Recommended** — installs Python and dependencies:
 
 ```bash
 conda env create -f environment.yml
 conda activate srarec
 ```
 
-### 3. Install external dependencies
+**Minimal** — Python only:
 
-SRARec uses external command-line tools for SRA download, read preprocessing, mapping, BAM processing, VCF generation and optional assembly-based workflows.
+```bash
+conda create -n srarec python=3.10
+conda activate srarec
+pip install pysam tqdm biopython pandas numpy matplotlib plotly
+```
 
-A basic Conda/Bioconda installation can be started with:
+### 3. External tools *(only if you did not use `environment.yml`)*
+
+Skip this step if you created the environment with `environment.yml` in step 2 — those dependencies are already included.
+
+If you used the **minimal** installation (Python only), install the external programs SRARec calls for download, preprocessing, mapping and BAM handling:
+
+| Tool | Role |
+|---|---|
+| [SRA Toolkit](https://github.com/ncbi/sra-tools) | Download and convert SRA runs |
+| [Entrez Direct](https://www.ncbi.nlm.nih.gov/books/NBK179288/) | Retrieve SRA metadata |
+| [Cutadapt](https://cutadapt.readthedocs.io/) | Adapter trimming |
+| [BWA-MEM](https://github.com/lh3/bwa) | Map Illumina reads |
+| [minimap2](https://github.com/lh3/minimap2) | Map ONT / PacBio reads |
+| [SAMtools](https://www.htslib.org/) | BAM processing and pileup |
+| [BCFtools](https://samtools.github.io/bcftools/) | Optional VCF output for coinfection screening |
+| [Picard](https://broadinstitute.github.io/picard/) | Reference dictionary creation |
+| [BBMap](https://bbmap.org/) | Optional paired-end read repair (`repair.sh`) |
+| [SPAdes](https://github.com/ablab/spades) | Optional HIV assembly (`--rnaviral` mode) |
+| [SHIVER](https://github.com/ChrisHIV/shiver) | Optional sample-specific HIV reference |
+
+Install missing tools with Bioconda:
 
 ```bash
 conda install -c bioconda -c conda-forge \
-  sra-tools \
-  entrez-direct \
-  cutadapt \
-  bwa \
-  minimap2 \
-  samtools \
-  bcftools \
-  picard \
-  spades
+  sra-tools entrez-direct cutadapt bwa minimap2 \
+  samtools bcftools picard bbmap spades shiver
 ```
 
-The main dependencies are:
-
-| Tool | Purpose | Official link |
-|---|---|---|
-| **SRA Toolkit** | Download and convert SRA runs with `prefetch`, `fasterq-dump` and `fastq-dump` | [NCBI SRA Toolkit](https://github.com/ncbi/sra-tools) |
-| **Entrez Direct** | Retrieve SRA metadata with `esearch` and `efetch` | [NCBI Entrez Direct](https://www.ncbi.nlm.nih.gov/books/NBK179288/) |
-| **Cutadapt** | Adapter trimming | [Cutadapt documentation](https://cutadapt.readthedocs.io/) |
-| **BBMap / BBTools** | Optional repair of orphan paired-end reads with `repair.sh` | [BBMap / BBTools](https://bbmap.org/) |
-| **BWA-MEM** | Mapping Illumina reads | [BWA GitHub repository](https://github.com/lh3/bwa) |
-| **minimap2** | Mapping ONT and PacBio reads | [minimap2 GitHub repository](https://github.com/lh3/minimap2) |
-| **SAMtools** | BAM/SAM processing, sorting, indexing and pileup generation | [SAMtools / HTSlib](https://www.htslib.org/) |
-| **BCFtools** | Optional VCF generation for potential coinfection analyses | [BCFtools](https://samtools.github.io/bcftools/) |
-| **Picard** | Reference dictionary creation in selected workflows | [Picard](https://broadinstitute.github.io/picard/) |
-| **SPAdes** | Optional viral assembly before SHIVER-based analysis | [SPAdes GitHub repository](https://github.com/ablab/spades) |
-| **SHIVER** | Optional sample-specific HIV reference reconstruction and read mapping | [SHIVER GitHub repository](https://github.com/ChrisHIV/shiver) |
-| **NGSNGS** | Optional read simulation for validation analyses | [NGSNGS GitHub repository](https://github.com/RAHenriksen/NGSNGS) |
-
-Some tools, especially **BBMap/BBTools**, **SHIVER**, **NGSNGS**, may need to be installed manually depending on the system.
-
-### 4. Check the installation
-
-Check that SRARec is available:
+### 4. Verify
 
 ```bash
 python3 SRARec1.3.py --help
+python3 generate_graphs.py --help
 ```
 
-The previous release `SRARec1.2.py` is kept under `Releases/` for reference.
+### Repository layout
 
-Check the main external tools:
-
-```bash
-prefetch --help
-fasterq-dump --help
-esearch -help
-efetch -help
-cutadapt --version
-bwa
-minimap2 --version
-samtools --version
-bcftools --version
-picard --version
-spades.py --help
+```text
+SRARec/
+├── SRARec1.3.py              # Main analysis script
+├── generate_graphs.py        # Recombination profile plots
+├── environment.yml           # Conda environment
+├── reference_indexes/
+│   ├── sars_cov_2/           # SARS-CoV-2 FASTA, indexes and NC_045512.2.gb
+│   ├── hiv_1/                # HIV-1 FASTA, indexes, NC_001802.1.gb and K03455.1_MOD.gb
+│   └── <custom_name>/        # Custom references indexed with --index_only
+└── complementary_data/
+    └── adapters.fa           # Adapter sequences
 ```
-
 
 ---
 
-## How to run SRARec
+## How to run
 
-Running SRARec requires four decisions:
+Every run requires four choices:
 
-1. which **reference genome** to use;
-2. which **input type** to analyse;
-3. which **analysis mode** to run;
-4. which **detection thresholds** to apply.
+1. **Reference genome** — SARS-CoV-2 (default), HIV-1 (`--virus hiv`), or a custom reference.
+2. **Input type** — SRA accession, local FASTQ (`--fastq`), or existing BAM (`--bam`).
+3. **Pipeline mode** — slow (`--slow`, recommended) or fast (default).
+4. **Search thresholds** — minimum read support and gamete frequency filters used during the recombination search.
 
-### Step 1. Choose the reference genome
+### Reference genomes
 
-SRARec can use built-in references or a custom reference.
-
-| Reference type | How to use it |
-|---|---|
-| Default SARS-CoV-2 reference | Run without `--virus`, or use the SARS-CoV-2 option supported by the current script |
-| HIV-1 reference | Use `--virus hiv` |
-| Custom reference | First create the custom index with `--index_only --custom_ref`; then run the analysis using `--virus <custom_name>` |
-
-In SRARec v1.2, `--virus` should be understood mainly as a **reference selector**. For custom references, the FASTA path is provided during indexing with `--custom_ref`, not directly as the main analysis argument.
-SRARec automatically prepares the reference indexes required for mapping. For built-in references, no manual indexing step is needed.
-
-#### Built-in SARS-CoV-2 reference
-
-If no virus is specified, SRARec uses the default SARS-CoV-2 reference:
-
-```text
-NC_045512.2.fna
-```
-
-Example:
-
-```bash
-python3 SRARec1.2.py SRRXXXXXXXX --slow
-```
-
-#### Built-in HIV-1 reference
-
-```bash
-python3 SRARec1.2.py SRRXXXXXXXX \
-  --slow \
-  --virus hiv
-```
-
-#### Custom reference
-
-First, create or overwrite the custom reference index:
-
-```bash
-python3 SRARec1.2.py \
-  --index_only \
-  --custom_ref path/to/custom_reference.fasta
-```
-
-Then run SRARec using the custom reference index:
-
-```bash
-python3 SRARec1.2.py SRRXXXXXXXX \
-  --slow \
-  --virus <custom_name>
-```
-
-Any `--virus` value that is not recognized as a built-in reference is interpreted as a custom reference selector and uses the most recently created custom reference index.
-
-### Step 2. Choose the input type
-
-SRARec can start from three main input types.
-
-| Input type | Use when | Basic command pattern |
+| Reference | Command flag | Files |
 |---|---|---|
-| **SRA accession** | The reads are public in NCBI-SRA | `python3 SRARec1.2.py SRRXXXXXXXX [options]` |
-| **Local FASTQ** | The reads are already available locally | `python3 SRARec1.2.py --simulacion reads.fastq output_folder [options]` |
-| **Precomputed BAM** | Mapping has already been performed | `python3 SRARec1.2.py sample_folder --bam [options]` |
+| SARS-CoV-2 (default) | *(none)* | `reference_indexes/sars_cov_2/NC_045512.2.fna` |
+| HIV-1 | `--virus hiv` | `reference_indexes/hiv_1/NC_001802.1.fna` |
+| Custom | `--index_only --custom_ref --virus <name>` then `--virus <name>` | `reference_indexes/<name>/` |
+
+Custom reference — index first, then analyse. The `--virus` name must match the subfolder created under `reference_indexes/`:
+
+```bash
+python3 SRARec1.3.py --index_only --custom_ref path/to/reference.fasta --virus my_virus
+python3 SRARec1.3.py SRRXXXXXXXX --slow --virus my_virus
+```
+
+This creates `reference_indexes/my_virus/reference.fna` and the mapping indexes alongside it.
+
+### Input types
 
 #### SRA accession
 
-Accepted accession formats include:
-
-```text
-SRRXXXXXXXX
-ERRXXXXXXXX
+```bash
+python3 SRARec1.3.py SRRXXXXXXXX --slow
+python3 SRARec1.3.py ERRXXXXXXXX --slow --virus hiv
 ```
 
-In SRA mode, SRARec retrieves sequencing metadata from NCBI, downloads the SRA file, converts it to FASTQ and then runs the selected pipeline.
+Accepted prefixes: `SRR`, `ERR`, `DRR`. The sequencing platform is detected automatically from SRA RunInfo — `--platform` is not required.
 
-#### Local FASTQ files
+#### Local FASTQ (`--fastq`)
 
-Use `--simulacion` for local FASTQ files.
-
-Single-end input:
+Single-end:
 
 ```bash
-python3 SRARec1.2.py \
-  --simulacion \
-  reads.fastq \
-  sample_output_folder \
-  --slow \
-  --platform ILLUMINA \
-  --virus <reference_selector>
+python3 SRARec1.3.py --fastq reads.fastq output_folder \
+  --slow --platform ILLUMINA
 ```
 
-Paired-end input:
+Paired-end:
 
 ```bash
-python3 SRARec1.2.py \
-  --simulacion \
-  reads_R1.fastq \
-  reads_R2.fastq \
-  sample_output_folder \
-  --slow \
-  --platform ILLUMINA \
-  --virus <reference_selector>
+python3 SRARec1.3.py --fastq reads_R1.fastq reads_R2.fastq output_folder \
+  --slow --platform ILLUMINA --virus hiv
 ```
 
-Supported platform values include:
+Platform values: `ILLUMINA`, `OXFORD_NANOPORE`, `ONT`, `PACBIO`, `PACBIO_SMRT`.
 
-```text
-ILLUMINA
-OXFORD_NANOPORE
-ONT
-PACBIO
-PACBIO_SMRT
-```
+#### Precomputed BAM (`--bam`)
 
-#### Precomputed BAM file
-
-Use `--bam` when the BAM file already exists.
+The BAM must be named `{folder_name}.bam` inside the sample folder:
 
 ```bash
-python3 SRARec1.2.py \
-  sample_folder \
-  --bam \
-  --platform ILLUMINA \
-  --virus <reference_selector>
+python3 SRARec1.3.py sample_folder --bam
 ```
 
-In the current v1.2 workflow, SRARec expects the BAM file to be inside `sample_folder` and to be named:
+`--platform` is optional in BAM mode: it does not affect the analysis, only the `Platform:` label written to the results file (default: `ILLUMINA`).
+
+Example layout:
 
 ```text
-sample_folder.bam
+sample_folder/
+└── {folder_name}.bam
 ```
 
-This mode skips FASTQ preprocessing and mapping, then proceeds to the read-level polymorphism and four-gamete-test analysis.
+### Pipeline modes
 
-### Step 3. Choose the analysis mode
-
-| Mode | How to activate it | Recommended use |
+| Mode | Flag | When to use |
 |---|---|---|
-| **Fast mode** | Default; do not add `--slow` | Faster exploratory analyses or high-coverage datasets |
-| **Slow mode** | Add `--slow` | Standard analyses; recommended default for publication-oriented analyses |
-| **Local/simulation mode** | Add `--simulacion` | Local FASTQ or simulated reads |
-| **BAM/RAVI mode** | Add `--bam` | Precomputed BAM files |
-| **SHIVER assembly mode** | Add `--use_shiver_assembly` | HIV analyses requiring sample-specific references |
+| **Slow** | `--slow` | Standard analyses; trims reads before mapping (recommended) |
+| **Fast** | *(default)* | Faster but less conservative — avoid when possible |
 
-#### Slow mode
+### Search thresholds
 
-The slow mode trims reads before mapping and is recommended for standard analyses:
-
-```bash
-python3 SRARec1.2.py SRRXXXXXXXX \
-  --slow \
-  --virus <reference_selector>
-```
-
-Main steps:
-
-```text
-SRA download
-  → FASTQ conversion
-  → trimming
-  → mapping
-  → duplicate removal
-  → pileup generation
-  → read-level polymorphism extraction
-  → four-gamete-test analysis
-```
-
-#### Fast mode
-
-The fast mode is used by default when `--slow` is not provided:
-
-```bash
-python3 SRARec1.2.py SRRXXXXXXXX \
-  --virus <reference_selector>
-```
-
-Main steps:
-
-```text
-SRA download
-  → FASTQ conversion
-  → initial mapping
-  → duplicate removal
-  → initial polymorphism screening
-  → extraction of informative reads
-  → trimming
-  → remapping
-  → duplicate removal
-  → pileup generation
-  → read-level polymorphism extraction
-  → four-gamete-test analysis
-```
-
-This mode reduces computational load by focusing the final analysis on reads that cover more than one polymorphic position.
-
-### Step 4. Choose detection thresholds
-
-SRARec v1.2 allows one or several threshold combinations to be tested.
+These parameters control the recombination **search** (which polymorphic sites and gametes are considered). They are passed as comma-separated lists; SRARec tests every combination.
 
 | Argument | Meaning | Default |
 |---|---|---:|
-| `--MIN_READS_LIST` | Minimum number of reads supporting a variant at a polymorphic position | `5` |
-| `--READS_GAMETOS_MINORITARIOS_LIST` | Minimum number of reads supporting each minor gamete | `1` |
-| `--THRESHOLD_GAMETO_FREQ_LIST` | Minimum frequency required for each gamete | `0.00` |
+| `--MIN_READS_LIST` | Minimum reads supporting a variant at a polymorphic site | `10` |
+| `--READS_GAMETOS_MINORITARIOS_LIST` | Minimum reads supporting each minor gamete | `5` |
+| `--THRESHOLD_GAMETO_FREQ_LIST` | Minimum frequency for each gamete | `0.05` |
 
-Each argument accepts a comma-separated list.
-
-#### Recommended conservative settings
-
-For conservative recombination detection, use stricter thresholds than the exploratory defaults:
+Override defaults when needed, for example:
 
 ```bash
-python3 SRARec1.2.py SRRXXXXXXXX \
-  --slow \
-  --MIN_READS_LIST 10 \
-  --READS_GAMETOS_MINORITARIOS_LIST 5 \
-  --THRESHOLD_GAMETO_FREQ_LIST 0.05 \
-  --virus <reference_selector>
-```
-
-These settings require:
-
-```text
-at least 10 reads supporting a polymorphic variant
-at least 5 reads supporting each gamete
-at least 5% frequency for each gamete
-```
-
-#### Testing several threshold combinations
-
-```bash
-python3 SRARec1.2.py SRRXXXXXXXX \
-  --slow \
-  --MIN_READS_LIST 5,10,20 \
-  --READS_GAMETOS_MINORITARIOS_LIST 1,5,10 \
-  --THRESHOLD_GAMETO_FREQ_LIST 0.00,0.05,0.10 \
-  --virus <reference_selector>
-```
-
-SRARec runs the final recombination analysis for every combination of the provided thresholds.
-
-#### Ignoring indels
-
-To restrict the analysis to base substitutions and ignore insertions and deletions, add:
-
-```bash
---noindel
-```
-
-Example:
-
-```bash
-python3 SRARec1.2.py SRRXXXXXXXX \
-  --slow \
-  --noindel \
-  --virus <reference_selector>
-```
-
----
-
-## Usage examples
-
-### Standard SARS-CoV-2 analysis from SRA
-
-```bash
-python3 SRARec1.2.py SRRXXXXXXXX \
-  --slow \
-  --MIN_READS_LIST 10 \
-  --READS_GAMETOS_MINORITARIOS_LIST 5 \
-  --THRESHOLD_GAMETO_FREQ_LIST 0.05
-```
-
-### Exploratory SARS-CoV-2 analysis from SRA
-
-```bash
-python3 SRARec1.2.py SRRXXXXXXXX \
+python3 SRARec1.3.py SRRXXXXXXXX --slow \
   --MIN_READS_LIST 5 \
   --READS_GAMETOS_MINORITARIOS_LIST 1 \
   --THRESHOLD_GAMETO_FREQ_LIST 0.00
 ```
 
-### HIV-1 analysis from SRA
+To ignore indels, add `--noindel` — recommended for samples with high diversity, where indels can add noise to the search.
+
+### Common examples
 
 ```bash
-python3 SRARec1.2.py SRRXXXXXXXX \
-  --slow \
-  --virus hiv \
-  --MIN_READS_LIST 10 \
-  --READS_GAMETOS_MINORITARIOS_LIST 5 \
-  --THRESHOLD_GAMETO_FREQ_LIST 0.05
-```
+# SARS-CoV-2 from SRA (default search thresholds)
+python3 SRARec1.3.py SRRXXXXXXXX --slow
 
-### Custom-reference analysis from SRA
+# HIV-1 from SRA
+python3 SRARec1.3.py SRRXXXXXXXX --slow --virus hiv
 
-Index the reference first:
+# Local ONT reads (--platform required for mapping)
+python3 SRARec1.3.py --fastq reads.fastq my_sample --slow --platform ONT
 
-```bash
-python3 SRARec1.2.py \
-  --index_only \
-  --custom_ref references/my_virus.fasta
-```
-
-Then run the analysis:
-
-```bash
-python3 SRARec1.2.py SRRXXXXXXXX \
-  --slow \
-  --virus my_virus \
-  --MIN_READS_LIST 10 \
-  --READS_GAMETOS_MINORITARIOS_LIST 5 \
-  --THRESHOLD_GAMETO_FREQ_LIST 0.05
-```
-
-### Local paired-end Illumina analysis
-
-```bash
-python3 SRARec1.2.py \
-  --simulacion \
-  sample_R1.fastq \
-  sample_R2.fastq \
-  sample_output \
-  --slow \
-  --platform ILLUMINA \
-  --virus <reference_selector>
-```
-
-### Local ONT analysis
-
-```bash
-python3 SRARec1.2.py \
-  --simulacion \
-  reads.fastq \
-  sample_output \
-  --slow \
-  --platform ONT \
-  --virus <reference_selector>
-```
-
-### BAM-based analysis
-
-```bash
-python3 SRARec1.2.py \
-  sample_output \
-  --bam \
-  --platform ILLUMINA \
-  --virus <reference_selector>
+# BAM-based analysis (--platform optional; only written to the Platform field)
+python3 SRARec1.3.py my_sample --bam
 ```
 
 ---
 
-## Command-line reference
+## Interpreting results
 
-```text
-usage: SRARec1.2.py [options] <SRR>
-       SRARec1.2.py --simulacion <fastq1> [fastq2] <output_folder> [options]
-       SRARec1.2.py <sample_folder> --bam [options]
-```
+SRARec writes `results_<mode>.txt` in the working directory (`results_slow.txt`, `results_fast.txt`, or `results_bam.txt`). Each line is one sample.
 
-### Main arguments
-
-| Argument | Description |
-|---|---|
-| `<SRR>` | NCBI-SRA accession, for example `SRRXXXXXXXX`, `ERRXXXXXXXX` or `DRRXXXXXXXX` |
-| `--slow` | Use the slow pipeline. If omitted, the fast pipeline is used by default |
-| `--simulacion` | Use local FASTQ files instead of downloading from SRA |
-| `--bam` | Start from an existing BAM file |
-| `--virus TEXT` | Reference selector. Built-in options include SARS-CoV-2/default and HIV aliases such as `hiv`/`vih`; any other value uses the latest custom reference index |
-| `--custom_ref PATH` | Path to a custom reference FASTA. Used with `--index_only` |
-| `--index_only` | Create or overwrite the custom reference index and exit |
-| `--platform TEXT` | Sequencing platform for local/simulation or BAM mode |
-| `--noindel` | Ignore insertions and deletions |
-| `--verbose` | Activate verbose output |
-
-### Detection-threshold arguments
-
-| Argument | Description | Default |
-|---|---|---:|
-| `--MIN_READS_LIST` | Comma-separated list of minimum read counts per polymorphic variant | `5` |
-| `--READS_GAMETOS_MINORITARIOS_LIST` | Comma-separated list of minimum read counts per gamete | `1` |
-| `--THRESHOLD_GAMETO_FREQ_LIST` | Comma-separated list of minimum gamete-frequency thresholds | `0.00` |
-
-### SHIVER/SPAdes arguments
-
-| Argument | Description | Default |
-|---|---|---|
-| `--use_shiver_assembly` | Run SPAdes in RNA-viral mode followed by SHIVER before BAM/RAVI analysis | disabled |
-| `--spades` | Path or command name for the SPAdes executable. Use `spades.py`; SRARec adds the RNA-viral mode internally | `spades.py` |
-| `--spades_threads` | Threads for SPAdes | `8` |
-| `--spades_mem_gb` | Memory in GB for SPAdes | `12` |
-| `--shiver_threads` | Threads for SHIVER | `6` |
-| `--shiver_dir` | Relative path to the SHIVER directory, or the SHIVER directory available in the current environment | `"$CONDA_PREFIX"` |
-| `--shiver_ref_alignment` | Relative path to the SHIVER reference alignment | `MyRefAlign.fasta` |
-| `--shiver_adapters` | Relative path to the adapter FASTA used by SHIVER | `adapters.fa` |
-| `--shiver_primers` | Relative path to the primer FASTA used by SHIVER. If no separate primer FASTA is used, `adapters.fa` can also be passed here | `adapters.fa` |
-| `--spades_conda_env` | Optional Conda environment for SPAdes | `none` |
-
----
-
-
-## Optional HIV assembly-based workflow
-
-SRARec v1.2 includes an optional HIV-focused workflow combining:
-
-```text
-trimming
-  → SPAdes in RNA-viral mode
-  → SHIVER
-  → BAM generation
-  → BAM/RAVI recombination analysis
-```
-
-This can be useful when a sample-specific reference is preferred before mapping reads for recombination analysis.
-
-Activate it with:
-
-```bash
---use_shiver_assembly
-```
-
-The SPAdes executable should be provided as:
-
-```bash
---spades spades.py
-```
-
-SRARec handles the RNA-viral SPAdes mode internally. 
-
-If the project includes a specific primer FASTA, replace the last value with that primer file. If no separate primer file is used, `adapters.fa` can be passed as both the adapter file and the primer file.
-
-### Example using local paired-end FASTQ files
-
-```bash
-python3 SRARec1.2.py \
-  --simulacion \
-  --use_shiver_assembly \
-  reads_R1.fastq \
-  reads_R2.fastq \
-  hiv_sample \
-  --virus hiv \
-  --platform ILLUMINA \
-  --spades spades.py \
-  --shiver_dir "$CONDA_PREFIX" \
-  --shiver_ref_alignment MyRefAlign.fasta \
-  --shiver_adapters adapters.fa \
-  --shiver_primers adapters.fa
-```
-
-### Example using one SRA accession
-
-```bash
-python3 SRARec1.2.py \
-  --use_shiver_assembly \
-  SRRXXXXXXXX \
-  --virus hiv \
-  --platform ILLUMINA \
-  --spades spades.py \
-  --shiver_dir "$CONDA_PREFIX" \
-  --shiver_ref_alignment MyRefAlign.fasta \
-  --shiver_adapters adapters.fa \
-  --shiver_primers adapters.fa
-```
-
----
-## Outputs
-
-The main SRARec output is written to:
-
-```text
-results_<mode>.txt
-```
-
-where `<mode>` corresponds to the selected workflow, for example:
-
-```text
-results_fast.txt
-results_slow.txt
-results_bam.txt
-```
-
-Each line corresponds to one analysed sample and contains fields such as:
+### Result fields
 
 ```text
 Sra:<sample_id>
@@ -713,400 +273,231 @@ No_Rec:<non_recombinant-compatible_pairs>
 BegFin_Reads:<read_start_end_coordinates>
 ```
 
-For each recombination-compatible signal, SRARec reports:
+| Field | Meaning |
+|---|---|
+| `Sra` | Sample identifier |
+| `Coinf_detected` | Preliminary screening flag — see below |
+| `Min_read_num` / `Min_gameto_num` / `Min_gameto_freq` | Search thresholds used for this line |
+| `Platform` | Sequencing platform |
+| `Rec` | Pairs classified as recombination-compatible (see example below) |
+| `No_Rec` | Pairs that do not meet recombination-compatible criteria |
+| `BegFin_Reads` | Read start/end coordinates per read (used for coverage plots) |
 
-- genomic position pair (**1-based** coordinates in `SRARec1.3` and current `generate_graphs.py` output);
-- alleles involved;
-- observed gamete combinations;
-- gamete frequencies;
-- supporting read counts;
-- number of times the event was recovered as true in broader comparisons.
+> **Coordinates** — From v1.3 onward, positions in `Rec`, `No_Rec` and `BegFin_Reads` are **1-based** (first nucleotide = 1).
 
-> **Coordinate system**  
-> From **SRARec v1.3** onward, positions written to `Rec`, `No_Rec` and `BegFin_Reads` use **1-based** indexing (first nucleotide = 1).  
-> Older result files that contain position `0` are still supported by `generate_graphs.py`, which detects 0-based legacy files automatically.
+### Reading `Rec`, `No_Rec` and `BegFin_Reads` — example
 
-### Optional VCF output for potential coinfections
-
-When potential coinfection signal is detected, SRARec can generate a VCF file using `bcftools`.
-
-VCF files are written to:
+Consider this result line (fields shortened for clarity):
 
 ```text
-vcf_coinfecciones/
+Rec:22877,23020,2,G.T,T.C,mireads:10,minfreq:0.05;24100,24250,1,C.A,G.T,mireads:10,minfreq:0.05;25000,25100,3,A.G,C.T,mireads:10,minfreq:0.05
+No_Rec:22877,22880,2
+BegFin_Reads:1,299;300,598;599,897
 ```
 
-with one file per sample:
+**`Rec`** — semicolon-separated recombination-compatible pairs. Each entry has four fields:
+
+```text
+position_A, position_B, recovery_count, gamete_detail
+```
+
+- `22877,23020,2,G.T,T.C,mireads:10,minfreq:0.05` — positions 22877 and 23020; `recovery_count` is `2` because this pair is supported within two nested compatible ranges in the hierarchical search; gamete pattern `G.T` / `T.C`.
+- `24100,24250,1,C.A,G.T,mireads:10,minfreq:0.05` — a second compatible pair with `recovery_count` `1` (supported in one hierarchical context).
+- `25000,25100,3,A.G,C.T,mireads:10,minfreq:0.05` — a third compatible pair with `recovery_count` `3` (supported within three nested compatible ranges).
+
+**`No_Rec`** — pairs tested but not compatible. Format: `position_A, position_B, detail`.
+
+- `22877,22880,2` — positions 22877 and 22880; detail `2` indicates partial gamete support (not all four gametes passed the search thresholds).
+
+**`BegFin_Reads`** — start and end of each read used in the analysis, as `start,end` pairs separated by semicolons:
+
+- `1,299` — one read spans positions 1–299
+- `300,598` — another read spans 300–598
+- `599,897` — another read spans 599–897
+
+These coordinates feed the coverage track in `generate_graphs.py`.
+
+### `Coinf_detected` — when is it `True`?
+
+`Coinf_detected:True` is set when, at **any polymorphic position**, at least **two alleles** each reach a frequency **> 10%** in the read pileup. It is a **preliminary screening flag** used to trigger optional VCF generation.
+
+`Coinf_detected:False` is written when fewer than two polymorphic positions pass the minimum-read filter, so no search is performed.
+
+> **Important** — `Coinf_detected:True` is **not** evidence of coinfection. Do **not** report coinfections in publications based on this flag alone. Always inspect the optional VCF manually, review allele frequencies and read support, and corroborate with independent biological or epidemiological evidence.
+
+### Optional VCF output
+
+When `Coinf_detected:True`, SRARec may write a screening VCF to:
 
 ```text
 vcf_coinfecciones/<sample_id>.vcf
 ```
 
+Treat this file as a starting point for manual review, not as a confirmed coinfection call.
+
+### What the results mean
+
+SRARec reports **read-supported recombination-compatible signals**: patterns in the data that are inconsistent with a single non-recombining haplotype, given the read length and coverage available.
+
+These signals are **not** direct proof of recombination. Always interpret them together with sequencing depth, read length, mapping quality, reference choice and biological context.
+
+We recommend analysing results in **context across multiple samples** and generating **genome-wide profiles** with `generate_graphs.py` (using `--exclusive-positions` and, when appropriate, `--aggregate-by-patient`). Aggregating signals across samples helps reveal general patterns and reduces the impact of sequencing artefacts that may appear in individual runs.
+
+To assess a **single candidate event**, inspect the search output carefully: supporting read counts, minor gamete frequency, whether any involved polymorphism is an indel, and `recovery_count` in `Rec` (always ≥ 1 for compatible pairs).
+
 ---
 
 ## Plotting recombination profiles
 
-The repository includes the auxiliary script:
+Use `generate_graphs.py` to turn a results file into an interactive HTML profile, a PNG figure, and per-position tables.
 
-```text
-generate_graphs.py
-```
+Bundled GenBank annotations live under `reference_indexes/`:
 
-at the repository root. It generates genome-wide recombination profiles, interactive HTML figures, PNG plots, and per-position export files from SRARec result files.
+| `--virus` | Annotation file |
+|---|---|
+| `sars-cov-2` (default) | `reference_indexes/sars_cov_2/NC_045512.2.gb` |
+| `hiv` | `reference_indexes/hiv_1/NC_001802.1.gb` |
+| `hxb2` | `reference_indexes/hiv_1/K03455.1_MOD.gb` |
 
-It can read SRARec-style result files containing fields such as:
+### Examples
 
-```text
-Sra:
-Rec:
-No_Rec:
-BegFin_Reads:
-```
-
-or tabular files containing columns such as:
-
-```text
-pA
-pB
-true
-Rec
-No_Rec
-```
-
-For each event with positions `pA` and `pB`, the script assigns the weight:
-
-```text
-w = 1 / (pB - pA)
-```
-
-Each event contributes this weight across the genomic interval:
-
-```text
-[pA, pB)
-```
-
-True and false contributions are computed separately. The recombination ratio at position `i` is calculated as:
-
-```text
-rho(i) = alpha × true(i) / [true(i) + false(i)]
-```
-
-when events are available at that position. Plot axes use **1-based** genomic positions.
-
-### CLI example
+Always include `--exclusive-positions` to prevent true and false signals from overlapping at the same genomic position.
 
 ```bash
-python3 generate_graphs.py results_slow.txt \
-  --annotation SC2.gb \
-  --alpha 1.0
+# SARS-CoV-2 profile (default annotation)
+python3 generate_graphs.py results_slow.txt --virus sars-cov-2 --exclusive-positions
+
+# HIV-1 profile
+python3 generate_graphs.py results_slow.txt --virus hiv --exclusive-positions
+
+# Custom output path
+python3 generate_graphs.py results_bam.txt -o output/my_profile.html \
+  --virus sars-cov-2 --exclusive-positions
+
+# Explicit annotation file
+python3 generate_graphs.py results_slow.txt --exclusive-positions \
+  --annotation reference_indexes/hiv_1/NC_001802.1.gb
 ```
 
-With explicit output HTML:
+### Output files
 
-```bash
-python3 generate_graphs.py results_bam.txt \
-  -o output/my_sample_profile.html \
-  --annotation SC2.gb
-```
+| File | Content |
+|---|---|
+| `*_recomb_profile.html` | Interactive Plotly figure |
+| `*_recomb_profile.png` | Static image |
+| `*_recombination_values.txt` | Recombination ratio ρ per position |
+| `*_coverage_values.txt` | Read coverage from `BegFin_Reads` |
 
 ### Main arguments
 
 | Argument | Description |
 |---|---|
-| `results_txt` | Input SRARec result file (positional) |
+| `results_txt` | SRARec results file |
 | `-o`, `--output` | Output HTML path |
-| `--annotation` | GenBank annotation file (e.g. `SC2.gb`, `HIV-1.gb`) |
-| `--genome-len INT` | Genome length, if not inferred automatically |
-| `--alpha FLOAT` | Scaling factor for ρ (default: `1.0`) |
-| `--exclusive-positions` | Prevent true/false signals from overlapping at the same position |
-| `--aggregate-by-patient` | Aggregate events by SRA/sample before summing |
+| `--virus` | Built-in annotation selector (`sars-cov-2`, `hiv`, `hxb2`) |
+| `--annotation` | Custom GenBank or GFF3 file |
+| `--alpha` | Scaling factor for ρ (default: `1.0`) |
+| `--exclusive-positions` | **Recommended.** Avoid true/false signal overlap at the same position |
+| `--aggregate-by-patient` | Aggregate events by sample before summing |
 | `--no-coverage` | Skip the coverage curve |
-| `--no-begfin-concentration` | Skip read start/end concentration |
-
-### Generated files
-
-When run from the command line, the script can write:
-
-| File | Content |
-|---|---|
-| `*_recomb_profile.html` | Interactive Plotly profile |
-| `*_recomb_profile.png` | Static matplotlib figure |
-| `*_recombination_values.txt` | Recombination ratio ρ per position |
-| `*_coverage_values.txt` | Read coverage from `BegFin_Reads` |
-
-The script also computes read start/end concentration curves used in the HTML and PNG plots.
+| `--no-begfin-concentration` | Skip read start/end concentration track |
 
 ---
 
-## SRARec Desktop (macOS GUI)
+## SRARec Desktop (macOS)
 
-**SRARec Desktop** is a standalone macOS application for read-level recombination analysis from **preprocessed BAM** files. It wraps the `SRARec1.3.py` analysis engine and `generate_graphs.py` plotting tools in a graphical workflow — no terminal required for routine BAM-based analyses.
+**SRARec Desktop** is a standalone macOS app for BAM-based recombination analysis. It wraps `SRARec1.3.py` and `generate_graphs.py` in a graphical interface.
 
-### What it does
+### Download
 
-- Analyse **one or many BAM files in series** from a single run
-- Built-in references: **SARS-CoV-2** and **HIV-1**
-- Adjustable detection thresholds (min reads, gamete support, frequency)
-- Embedded **recombination profile** plot, updated after each sample in a batch
-- Export results in multiple formats (gamete summary, ρ per position, coverage, BegFin, raw lines)
-- Regenerate or save **PNG / HTML** profiles for selected samples
-- Open existing `results_*.txt` files without re-running an analysis
+**[SRARec Desktop 1.0.0 (macOS zip)](https://github.com/ldgonzalezvazquez/SRARec/releases/download/desktop-1.0.0/SRARec-Desktop-1.0.0-macos.zip)** (~300 MB)
 
-### Download (macOS)
+### Install
 
-**[Download SRARec Desktop 1.0.0 (zip)](https://github.com/ldgonzalezvazquez/SRARec/releases/download/desktop-1.0.0/SRARec-Desktop-1.0.0-macos.zip)** (~300 MB)
-
-The link starts the download in your browser. The archive contains the app bundle and `Install SRARec Desktop.command`.  
-Release page: [desktop-1.0.0](https://github.com/ldgonzalezvazquez/SRARec/releases/tag/desktop-1.0.0).
-
-| Requirement | Detail |
-|---|---|
-| Platform | macOS (Apple Silicon or Intel) |
-| Input | Coordinate-sorted, indexed BAM (`.bam` + `.bai`) |
-| Disk space | ~800 MB installed |
-
-### Publishing the macOS Desktop build
-
-When you publish a **new** zip, update the README download URL if the tag or filename changes.
-
-**GitHub website**
-
-1. Open **[Releases → Draft a new release](https://github.com/ldgonzalezvazquez/SRARec/releases/new)**.
-2. Tag: `desktop-1.0.0` (or a new tag, e.g. `desktop-1.0.1`).
-3. Title: `SRARec Desktop 1.0.0 (macOS)`.
-4. Drag **`SRARec-Desktop-1.0.0-macos.zip`** into *Attach binaries*.
-5. Click **Publish release**.
-
-> **Pre-releases:** GitHub excludes pre-releases from `releases/latest`. Use a tag-specific URL in the README:  
-> `https://github.com/ldgonzalezvazquez/SRARec/releases/download/<tag>/SRARec-Desktop-1.0.0-macos.zip`
-
-**Terminal** (after `brew install gh` and `gh auth login`):
-
-```bash
-scripts/publish_desktop_release.sh ~/Desktop/SRARec-desktop-build/dist/SRARec-Desktop-1.0.0-macos.zip
-```
-
-### Installation
-
-1. **Download** the zip file using the link above (your browser should start the download immediately).
-2. **Unzip** the archive.
-3. **Double-click** `Install SRARec Desktop.command`.
-4. If macOS blocks the installer, open **System Settings → Privacy & Security** and click **Open Anyway**. Confirm if prompted. The installer will then run automatically in Terminal.
-5. The script removes the macOS download block, installs **SRARec Desktop** in **Applications**, and launches the app.
-6. Once installation is complete, you can delete the unzipped folder and the downloaded `.zip` file.
-
-If you have any trouble installing, contact us at **luisdaniel.gonzalez@uvigo.es** or **luisde365@gmail.com**.
+1. Download and unzip the archive.
+2. Double-click `Install SRARec Desktop.command`.
+3. If macOS blocks the installer: **System Settings → Privacy & Security → Open Anyway**.
+4. The app is installed in **Applications**.
 
 ### Quick start
 
 1. Launch **SRARec Desktop**.
-2. Click **Add BAMs...** and select one or more `.bam` files (hold ⌘ to multi-select).
-3. Choose **sequencing platform**, **reference**, and **output folder** (default: `~/SRARec_runs`).
-4. Adjust thresholds if needed, then click **Run analysis**.
-5. Combined results are written to `{output_folder}/results_bam.txt` (one line per sample).
-6. Use **Regenerate graph**, **Save graph**, or **Save results...** to export figures and tables — including from an existing results file without running a new analysis.
+2. Click **Add BAMs...** and select one or more coordinate-sorted, indexed BAM files.
+3. Choose platform, reference (SARS-CoV-2 or HIV-1) and output folder.
+4. Click **Run analysis** — results are written to `results_bam.txt`.
+5. Use **Regenerate graph** or **Save graph** to export HTML/PNG profiles.
 
-### BAM requirements
+Mapping, trimming and SRA download must be done beforehand (e.g. with `SRARec1.3.py`).
 
-| Requirement | Notes |
+| Requirement | Detail |
 |---|---|
-| Coordinate-sorted | `@HD SO:coordinate` in BAM header |
-| Indexed | `.bai` file present (the app can create it) |
-| Deduplicated | Recommended |
-| Paired-end | Mates should be fixed (`samtools fixmate`) |
+| Platform | macOS (Apple Silicon or Intel) |
+| Input | Coordinate-sorted BAM; `.bai` index optional (the app can create it) |
+| Disk space | ~800 MB installed |
 
-Mapping, trimming, and SRA download must be done **before** using SRARec Desktop (e.g. with `SRARec1.3.py`).
-
----
-
-## Method summary
-
-SRARec detects recombination-compatible signals by analysing physically linked variants in individual reads.
-
-### Mapping strategy
-
-SRARec selects the mapper according to the sequencing platform:
-
-| Platform | Mapper | Preset |
-|---|---|---|
-| `ILLUMINA` | BWA-MEM | `bwa mem -M` |
-| `OXFORD_NANOPORE`, `ONT` | minimap2 | `-ax map-ont` |
-| `PACBIO`, `PACBIO_SMRT` | minimap2 | `-ax map-pb` |
-
-After mapping, SRARec applies filtering and processing steps including:
-
-```text
-MAPQ > 30
-minimum aligned fraction of read = 0.9
-removal of unmapped reads
-removal of secondary alignments
-removal of supplementary alignments
-sorting
-mate fixing for paired-end reads
-duplicate removal
-BAM indexing
-```
-
-### Candidate polymorphic-site detection
-
-SRARec uses `samtools mpileup` to identify candidate polymorphic positions. Candidate positions are retained when at least two variants are supported by the selected minimum number of reads.
-
-The default base-quality filter is:
-
-```text
-minimum base quality = 20
-```
-
-SRARec can analyse:
-
-- substitutions;
-- deletions;
-- insertions;
-- combined base + insertion events.
-
-Insertions are represented at their leftmost coordinate and are retained only when all inserted nucleotides satisfy the base-quality filter.
-
-### Four-gamete test implementation
-
-For each pair of polymorphic positions, SRARec evaluates whether all four allele combinations are observed among reads spanning both positions.
-
-For two positions, `A` and `B`, and two variants per position, a recombination-compatible signal requires evidence for:
-
-```text
-A1-B1
-A1-B2
-A2-B1
-A2-B2
-```
-
-A pair is classified as recombination-compatible only when all required gametes pass the selected read-count and frequency thresholds.
-
-### Recursive comparison strategy
-
-Within each analysis group, SRARec starts by comparing the two most distant positions.
-
-- If the test is negative, the complete combination is considered negative.
-- If the test is positive, the comparison is refined using the median position of the group.
-- Adjacent positions from different groups within the same window are also compared when they do not share a group.
+For installation issues or help incorporating new references: **luisdaniel.gonzalez@uvigo.es** or **luisde365@gmail.com**.
 
 ---
 
-## Validation
+## Optional HIV workflow (SPAdes + SHIVER)
 
-SRARec was evaluated using three complementary strategies.
-
-### 1. Simulated SARS-CoV-2 sequences
-
-The SARS-CoV-2 reference genome `NC_045512.2` was mutated to generate pairs of sequences with different levels of diversity:
+For HIV samples where a sample-specific reference is preferred, SRARec can run:
 
 ```text
-π = 0.005
-π = 0.010
-π = 0.050
+trimming → SPAdes (--rnaviral) → SHIVER → BAM analysis
 ```
 
-Insertion and deletion rates were also varied:
+Activate with `--use_shiver_assembly`. Adapter sequences are in `complementary_data/adapters.fa`.
 
-```text
-Insertion rates: 0.000 and 0.003
-Deletion rates:  0.000 and 0.002
+```bash
+python3 SRARec1.3.py --fastq --use_shiver_assembly \
+  reads_R1.fastq reads_R2.fastq hiv_sample \
+  --virus hiv --platform ILLUMINA \
+  --spades spades.py \
+  --shiver_dir "$CONDA_PREFIX" \
+  --shiver_ref_alignment MyRefAlign.fasta \
+  --shiver_adapters complementary_data/adapters.fa \
+  --shiver_primers complementary_data/adapters.fa
 ```
-
-Two homologous recombinant sequences were generated using random breakpoints. Paired-end FASTQ files were then simulated with **NGSNGS** using different coverage values, read sizes and quality settings.
-
-SRARec was run under different detection-filter combinations, evaluating true events, missed events and false positives by comparing detected signals to the simulated breakpoint position with a margin of:
-
-```text
-±100 nucleotides
-```
-
-In total, this validation included:
-
-```text
-93,312 simulations
-```
-
-### 2. Recombinant simulations using real SARS-CoV-2 VOC sequences
-
-SRARec was also tested using recombinant genomes generated from real sequences belonging to past SARS-CoV-2 variants of concern.
-
-This validation used:
-
-```text
-50 sequences per VOC
-9,000 simulations
-```
-
-### 3. Comparison with published SARS-CoV-2 recombination studies
-
-SRARec was run on NCBI-SRA accessions from previous SARS-CoV-2 recombination studies, including datasets from Wertheim et al. and Pipek et al.
-
-For this comparison, relaxed filters were used:
-
-```text
-minimum reads per polymorphism = 5
-minimum reads per gamete       = 1
-minimum gamete frequency       = 0%
-```
-
-Detected signals were not expected to be identical to those obtained with the original methodologies, but they were evaluated in relation to previously reported recombination sites.
 
 ---
 
-## Large-scale analyses
-
-SRARec has been applied to large public sequencing datasets from NCBI-SRA.
-
-Project-scale analyses included SARS-CoV-2 and HIV-1 SRA entries downloaded as of:
+## Command-line reference
 
 ```text
-2025-09-02
+python3 SRARec1.3.py [options] [--slow] <SRR>
+python3 SRARec1.3.py --fastq [--slow] <fastq1> [fastq2] <output_folder> [options]
+python3 SRARec1.3.py [--slow] <sample_folder> --bam [options]
 ```
 
-Analyses were run in parallel at the:
-
-```text
-Galician Supercomputing Center (CESGA)
-```
-
-using:
-
-```text
-default parameters
-slow mode
-```
-
-### Analysis records
-
-| Dataset | Status/date | Approximate size |
-|---|---:|---:|
-| SARS-CoV-2 final analysis | 2025-12-12 | ~600,000 SRAs |
-| HIV-1 final analysis | 2025-12-12 | ~5,000 SRAs |
-
+| Argument | Description |
+|---|---|
+| `<SRR>` | NCBI-SRA accession |
+| `--slow` | Slow pipeline (recommended) |
+| `--fastq` | Local FASTQ input |
+| `--bam` | Precomputed BAM input |
+| `--virus TEXT` | Reference: default SARS-CoV-2; `hiv` for HIV-1; any other value uses `reference_indexes/<name>/` |
+| `--custom_ref PATH` | Custom FASTA (with `--index_only` and `--virus`) |
+| `--index_only` | Build custom reference index in `reference_indexes/<virus>/` and exit |
+| `--platform TEXT` | Platform label for results. Auto-detected from SRA; required for `--fastq` mapping; optional metadata in `--bam` mode (default: `ILLUMINA`) |
+| `--noindel` | Ignore indels (recommended for high-diversity samples) |
+| `--verbose` | Verbose output |
+| `--MIN_READS_LIST` | Minimum reads per variant (default: `10`) |
+| `--READS_GAMETOS_MINORITARIOS_LIST` | Minimum reads per gamete (default: `5`) |
+| `--THRESHOLD_GAMETO_FREQ_LIST` | Minimum gamete frequency (default: `0.05`) |
+| `--use_shiver_assembly` | SPAdes + SHIVER HIV workflow |
+| `--spades`, `--spades_threads`, `--spades_mem_gb` | SPAdes options |
+| `--shiver_dir`, `--shiver_threads`, `--shiver_ref_alignment`, `--shiver_adapters`, `--shiver_primers` | SHIVER options |
 
 ---
 
 ## Limitations
 
-SRARec detects **read-supported recombination-compatible signals**, not direct molecular recombination events.
-
-Detected signals may be influenced by:
-
-- local genetic diversity;
-- read length;
-- sequencing depth;
-- mapping quality;
-- reference choice;
-- indels;
-- amplicon design;
-- PCR chimeras;
-- duplicate removal;
-- filtering thresholds;
-- local genome complexity;
-- read start/end distribution;
-- assembly or sample-specific reference reconstruction choices in SHIVER-based workflows.
-
-Therefore, SRARec results should be interpreted as evidence of read-level incompatibility with a simple non-recombining history, ideally together with phylogenetic, epidemiological or biological evidence.
+- SRARec detects read-supported recombination-compatible signals, not confirmed recombination events.
+- Results depend on read length, depth, mapping quality, reference genome, amplicon design, PCR artefacts and search thresholds.
+- Prefer multi-sample profiles over isolated per-sample patterns to reduce sequencing noise.
+- For individual events, review read support, minor gamete frequency, indel involvement and recovery count before drawing conclusions.
+- `Coinf_detected:True` is a screening flag only — not evidence of coinfection.
 
 ---
 
@@ -1115,45 +506,47 @@ Therefore, SRARec results should be interpreted as evidence of read-level incomp
 If you use SRARec, please cite:
 
 ```text
-González-Vázquez LD, Iglesias-Rivas P,  Arenas , Martin DP. ???
-SRARec: read-level detection of recombination signals from SRA and local sequencing data.
-Version 1.3.
+González-Vázquez LD, Iglesias-Rivas P, Arenas M, Martin DP.
+SRARec: A program for detecting recombination in sequencing reads and its application to uncover recombination patterns in SARS-CoV-2 and HIV-1
 [Journal / preprint / DOI to be added]
 ```
 
-BibTeX placeholder:
-
-```bibtex
-@software{SRARec,
-  title        = {SRARec: read-level detection of recombination signals from SRA and local sequencing data},
-  author       = {González-Vázquez, Luis Daniel and Iglesias-Rivas, Paula, and Martin, Arenas, Miguel and Darren P.},
-  year         = {2026},
-  version      = {1.3},
-  license      = {MIT}
-}
-```
-
-> Update this citation once the manuscript, preprint, DOI or Zenodo record is available.
-
 ---
 
-## License
+## References
 
-SRARec is distributed under the **MIT License**.
+Methodological and software references used by SRARec:
 
-See the [`LICENSE`](LICENSE) file for details.
+1. Hudson RR, Kaplan NL. Statistical properties of the number of recombination events in the history of a sample of DNA sequences. *Genetics*. 1985;111(1):147–164.
 
----
+2. Li H, Durbin R. Fast and accurate short read alignment with Burrows–Wheeler transform. *Bioinformatics*. 2009;25(14):1754–1760. doi:[10.1093/bioinformatics/btp324](https://doi.org/10.1093/bioinformatics/btp324)
 
-## References and external tools
+3. Li H. Aligning sequence reads, clone sequences and assembly contigs with BWA-MEM. *arXiv*. 2013;1303.3997.
 
-SRARec uses or interfaces with the following tools and resources:
+4. Li H. Minimap2: pairwise alignment for nucleotide sequences. *Bioinformatics*. 2018;34(18):3094–3100. doi:[10.1093/bioinformatics/bty191](https://doi.org/10.1093/bioinformatics/bty191)
+
+5. Danecek P, Bonfield JK, Liddle J, et al. Twelve years of SAMtools and BCFtools. *GigaScience*. 2021;10(2):giab008. doi:[10.1093/gigascience/giab008](https://doi.org/10.1093/gigascience/giab008)
+
+6. Martin M. Cutadapt removes adapter sequences from high-throughput sequencing reads. *EMBnet.journal*. 2011;17(1):10–12. doi:[10.14806/ej.17.1.200](https://doi.org/10.14806/ej.17.1.200)
+
+7. Bankevich A, Nurk S, Antipov D, et al. SPAdes: a new genome assembly algorithm and its applications to single-cell sequencing. *J Comput Biol*. 2012;19(5):455–477. doi:[10.1089/cmb.2012.0021](https://doi.org/10.1089/cmb.2012.0021)
+
+8. Wymant C, Blanquart F, Golubchik T, et al. Easy and accurate reconstruction of whole HIV genomes from short-read sequence data with shiver. *Virus Evol*. 2018;4(1):vey007. doi:[10.1093/ve/vey007](https://doi.org/10.1093/ve/vey007)
+
+9. Leinonen R, Sugawara H, Shumway M; International Nucleotide Sequence Database Collaboration. The sequence read archive. *Nucleic Acids Res*. 2011;39(Database issue):D19–D21. doi:[10.1093/nar/gkq1019](https://doi.org/10.1093/nar/gkq1019)
+
+10. Katz K, Shutov S, Lapoint R, et al. The Sequence Read Archive: a decade more of explosive growth. *Nucleic Acids Res*. 2022;50(D1):D30–D38. doi:[10.1093/nar/gkab1053](https://doi.org/10.1093/nar/gkab1053)
+
+11. Bushnell B, Rood J, Singer E. BBMerge – Accurate paired shotgun read merging via overlap. *PLoS ONE*. 2017;12(10):e0185056. doi:[10.1371/journal.pone.0185056](https://doi.org/10.1371/journal.pone.0185056)
+
+12. Kans J. Entrez Direct: E-utilities on the Unix command line. In: *Entrez Programming Utilities Help*. Bethesda (MD): National Center for Biotechnology Information (US); 2013.
+
+External resources:
 
 - [NCBI Sequence Read Archive](https://www.ncbi.nlm.nih.gov/sra)
 - [SRA Toolkit](https://github.com/ncbi/sra-tools)
 - [Entrez Direct](https://www.ncbi.nlm.nih.gov/books/NBK179288/)
 - [Cutadapt](https://cutadapt.readthedocs.io/)
-- [BBMap / BBTools](https://bbmap.org/)
 - [BWA](https://github.com/lh3/bwa)
 - [minimap2](https://github.com/lh3/minimap2)
 - [SAMtools / HTSlib](https://www.htslib.org/)
@@ -1161,36 +554,21 @@ SRARec uses or interfaces with the following tools and resources:
 - [Picard](https://broadinstitute.github.io/picard/)
 - [SPAdes](https://github.com/ablab/spades)
 - [SHIVER](https://github.com/ChrisHIV/shiver)
-- [NGSNGS](https://github.com/RAHenriksen/NGSNGS)
+- [BBMap](https://bbmap.org/)
 
-Suggested references to complete in the manuscript/repository:
+---
 
-```text
-Kans, 2013
-Leinonen et al., 2011
-Martin, 2011
-Bushnell et al., 2017
-Li and Durbin, 2009
-Li, 2011
-Li, 2013
-Li, 2018
-Danecek et al., 2021
-Henriksen et al., 2023
-Wertheim et al., 2022
-Pipek et al., 2024
-```
+## License
+
+SRARec is distributed under the [MIT License](LICENSE).
 
 ---
 
 ## Contact
 
-For questions, bug reports or feature requests, please open an issue in the repository.
+For questions, bug reports or feature requests, open an issue in the repository.
 
-Maintainers/contributors listed in the project materials:
+**Maintainers**
 
-```text
-Luis Daniel González-Vázquez
-Paula Iglesias-Rivas
-Miguel Arenas
-Darren P. Martin
-```
+- Luis Daniel González-Vázquez — luisdaniel.gonzalez@uvigo.es
+- Paula Iglesias-Rivas – paula.iglesias.rivas@uvigo.gal
