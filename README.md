@@ -601,7 +601,7 @@ SRARec: A program for detecting recombination in sequencing reads and its applic
 
 Methodological and software references used by SRARec:
 
-1. Hudson RR, Kaplan NL. Statistical properties of the number of recombination events in the history of a sample of DNA sequences. *Genetics*. 1985;111(1):147–164.
+1. Hudson RR, Kaplan NL. Statistical properties of the number of recombination events in the history of a sample of DNA sequences. *Genetics*. 1985;111(1):147–164. doi [https://doi.org/](https://doi.org/10.1093/genetics/111.1.147)
 
 2. Li H, Durbin R. Fast and accurate short read alignment with Burrows–Wheeler transform. *Bioinformatics*. 2009;25(14):1754–1760. doi:[10.1093/bioinformatics/btp324](https://doi.org/10.1093/bioinformatics/btp324)
 
