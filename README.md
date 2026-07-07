@@ -620,7 +620,7 @@ https://doi.org/10.48550/arXiv.1303.3997)
 
 9. Leinonen R, Sugawara H, Shumway M; International Nucleotide Sequence Database Collaboration. The sequence read archive. *Nucleic Acids Res*. 2011;39(Database issue):D19–D21. doi:[10.1093/nar/gkq1019](https://doi.org/10.1093/nar/gkq1019)
 
-10. Katz K, Shutov S, Lapoint R, et al. The Sequence Read Archive: a decade more of explosive growth. *Nucleic Acids Res*. 2022;50(D1):D386–D390. doi:[10.1093/nar/gkab1053](https://doi.org/10.1093/nar/gkab1053)
+10. Katz K, Shutov O, Lapoint R, et al. The Sequence Read Archive: a decade more of explosive growth. *Nucleic Acids Res*. 2022;50(D1):D386–D390. doi:[10.1093/nar/gkab1053](https://doi.org/10.1093/nar/gkab1053)
 
 11. Bushnell B, Rood J, Singer E. BBMerge – Accurate paired shotgun read merging via overlap. *PLoS ONE*. 2017;12(10):e0185056. doi:[10.1371/journal.pone.0185056](https://doi.org/10.1371/journal.pone.0185056)
 
