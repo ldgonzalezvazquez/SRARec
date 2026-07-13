@@ -165,7 +165,7 @@ def parse_arguments():
     parser.add_argument("--diversity", type=float, help="Pi diversity (π) factor to determine the number of mutations.")
     parser.add_argument("--insertion_rate", type=float, help="Insertion rate.")
     parser.add_argument("--deletion_rate", type=float, help="Deletion rate.")
-    parser.add_argument("--mutation_intrahost", action="store_true", help="Apply a second round of intrahost mutations")
+    parser.add_argument("--mutacion_intrahost", action="store_true", help="Apply a second round of intrahost mutations")
     parser.add_argument("--intrahost_diversity", type=float, help=" Intrahost pi diversity (π).")
     parser.add_argument("--intrahost_insertion_rate", type=float, help="Intrahost insertion rate.")
     parser.add_argument("--intrahost_deletion_rate", type=float, help="Intrahost deletion rate.")
