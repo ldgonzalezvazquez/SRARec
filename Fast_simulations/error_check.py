@@ -44,4 +44,4 @@ with open("param_list_new.txt", "w") as f_out:
 # 4. Print summary information
 print(f"[INFO] Total number of parameters in param_list.txt: {len(open('param_list.txt').readlines())}")
 print(f"[INFO] Parameters NOT found in results_simulaciones.csv: {len(missing_params)}")
-print(f"[INFO] The file 'param_list_nuevo.txt' has been created")
+print(f"[INFO] The file 'param_list_new.txt' has been created")
