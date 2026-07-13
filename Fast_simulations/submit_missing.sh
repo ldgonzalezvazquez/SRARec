@@ -6,7 +6,7 @@
 PARAM_FILE="param_list_new.txt"
 
 if [ ! -f "$PARAM_FILE" ]; then
-    echo "[ERROR] No existe $PARAM_FILE"
+    echo "[ERROR] Does not exist $PARAM_FILE"
     exit 1
 fi
 
@@ -68,7 +68,7 @@ fi
 LINE=$(sed -n "$((INDEX+1))p" "$PARAM_FILE")
 
 if [ -z "$LINE" ]; then
-    echo "[ERROR] No data in line $INDEX de $PARAM_FILE"
+    echo "[ERROR] No data in line $INDEX of $PARAM_FILE"
     exit 1
 fi
 
