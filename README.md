@@ -1,6 +1,6 @@
 ## Running the simulations
 
-The simulations are designed to run on CESGA using Slurm.
+The simulation workflow was originally prepared for CESGA (Galician Supercomputing Technology Centre) using Slurm, but it can be adapted to any Linux or HPC environment with the required dependencies installed. The current submission scripts use Slurm commands (`sbatch`, `squeue`, `sacct`) and CESGA-specific module loading, so these parts should be modified if another queue system is used.
 
 ### 1. Enter the simulation directory
 
@@ -32,9 +32,8 @@ The path to the NGSNGS executable must also be correctly defined in `simulations
 ### 3. Give execution permissions
 
 ```bash
-chmod +x SRARec.py
-chmod +x submit_simulation_cascade.sh
-chmod +x submit_missing*.sh
+chmod +x <script_name>
+
 ```
 
 ### 4. Set the simulation parameters
