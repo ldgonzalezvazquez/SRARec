@@ -17,24 +17,23 @@ from tqdm import tqdm
 import argparse
 
 ############################################
-# Configuración Global
+# Global configuration
 ############################################
 min_base_qual = 20
 min_fraction_align_reads=0.9
 #############
-#Variables de ejecución
+#Execution variables
 #############
 MAX_PIPELINE_ATTEMPTS = 3
 MAX_DOWNLOAD_ATTEMPTS = 3
 VERBOSE = False
 #module load cesga/2020 gcc/system sra-toolkit/2.10.9 edirect/20240904 cutadapt/3.5 porechop/0.2.4 bwa/0.7.17 minimap2/2.20 htslib/1.19 samtools/1.19 bcftools/1.19
-#Al cambiar de cuenta hay que cambiar esto: /home/uvi/cm/lgv/software/bbmap/repair.sh e instalar ese script con mkdir -p ~/software && cd ~/software |||||| wget https://sourceforge.net/projects/bbmap/files/latest/download -O bbtools.tar.gz |||||| tar -xvzf bbtools.tar.gz |||||| rm bbtools.tar.gz |||||| export PATH=$HOME/software/bbmap:$PATH (|||||| INDICA LÍNEAS SEPARADAS)
 ############################################
-# Funciones Auxiliares
+# Auxiliary functions
 ############################################
 
 def print_header():
-    # Códigos de colores ANSI
+    # ANSI color codes
     RED = "\033[91m"
     GREEN = "\033[92m"
     YELLOW = "\033[93m"
@@ -62,40 +61,40 @@ def print_header():
     print(header)
 
 def print_step(message):
-    """Imprime un paso principal en color blanco."""
-    print(f"\033[1;37m{message}\033[0m")  # Blanco brillante
+    """Print a main step in white."""
+    print(f"\033[1;37m{message}\033[0m")  # Bright white
 
 def print_substep(message):
-    """Imprime un subpaso (comando ejecutado) en color azul."""
-    print(f"\033[1;34m{message}\033[0m")  # Azul
+    """Print a substep or executed command in blue."""
+    print(f"\033[1;34m{message}\033[0m")  # Blue
 
 def print_output(message):
-    """Imprime la salida del programa ejecutado en color verde."""
-    print(f"\033[1;32m{message}\033[0m")  # Verde
+    """Print the output of the executed program in green."""
+    print(f"\033[1;32m{message}\033[0m")  # Green
 
 def print_error(message):
-    """Imprime un error en color rojo."""
+    """Print an error in red."""
     print(f"\033[1;31m[ERROR] {message}\033[0m")
 
 def print_verbose(message):
-    """Imprime mensajes extras sólo si VERBOSE = True."""
+    """Print extra messages only if VERBOSE = True."""
     if VERBOSE:
-        # Puedes elegir otro color, por ejemplo magenta (35)
+        # Another color can be chosen, for example magenta (35)
         print(f"\033[1;35m[VERBOSE] {message}\033[0m")
 
 def identify_platform_and_layout(srr):
     """
-    Identifica la plataforma de secuenciación y el tipo de lectura (Single End o Paired End) para un SRR dado.
-    Retorna un diccionario con el nombre de la plataforma y el layout.
+    Identify the sequencing platform and read layout (single-end or paired-end) for a given SRR.
+    Return a dictionary containing the platform name and layout.
     """
     try:
         cmd = f"esearch -db sra -query {srr} | efetch -format runinfo"
-        print_verbose(f"Identificando plataforma con comando: {cmd}")
+        print_verbose(f"Identify the sequencing platform: {cmd}")
         runinfo = subprocess.check_output(cmd, shell=True, text=True).strip()
 
         lines = runinfo.split('\n')
         if len(lines) < 2:
-            raise ValueError("No se encontró información en RunInfo.")
+            raise ValueError("No information was found in RunInfo.")
 
         headers = lines[0].split(',')
         data = lines[1].split(',')
@@ -104,22 +103,22 @@ def identify_platform_and_layout(srr):
         layout_index = headers.index("LibraryLayout") if "LibraryLayout" in headers else -1
 
         if platform_index == -1 or layout_index == -1:
-            raise ValueError("No se encontraron las columnas 'Platform' o 'LibraryLayout' en RunInfo.")
+            raise ValueError("The 'Platform' or 'LibraryLayout' columns were not found in RunInfo.")
 
         platform = data[platform_index].strip()
         layout = data[layout_index].strip()
 
-        print(f"[INFO] Plataforma identificada: {platform}")
-        print(f"[INFO] Tipo de lectura: {layout}")
+        print(f"[INFO] Platform: {platform}")
+        print(f"[INFO] Read: {layout}")
 
         return {"platform": platform, "layout": layout}
     except Exception as e:
-        print_error(f"No se pudo identificar la plataforma y el tipo de lectura: {e}")
+        print_error(f"Error in platform: {e}")
         sys.exit(1)
 
 def retry_command(max_attempts, cmd, shell=True):
     """
-    Ejecuta un comando con reintentos en caso de fallo.
+    Run a command with retries in case of failure.
     """
     attempt = 1
     while attempt <= max_attempts:
@@ -128,42 +127,42 @@ def retry_command(max_attempts, cmd, shell=True):
             process = subprocess.Popen(
                 cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True
             )
-            stdout, stderr = process.communicate() #espera a que el proceso termine y captura su salida (stdout) y errores (stderr)
+            stdout, stderr = process.communicate() #waits for the process to finish and captures its output (stdout) and errors (stderr)
             print_output(stdout)
-            if process.returncode != 0: #process.returncode devuelve el código de salida del comando
-                # Mostrar también el stderr para depuración
+            if process.returncode != 0: #process.returncode returns the command exit code
+                # Also show stderr for debugging
                 print_output(f"[STDERR]: {stderr}") 
-                raise subprocess.CalledProcessError(process.returncode, cmd) # Subporcess es el módulo que realiza el subproceso
+                raise subprocess.CalledProcessError(process.returncode, cmd) # subprocess is the module that runs the subprocess
             return True
         except subprocess.CalledProcessError:
-            print_substep(f"Intento {attempt} de {max_attempts} fallido. Reintentando...")
+            print_substep(f"Attemp {attempt} of {max_attempts} failed. Retrying...")
             attempt += 1
-    print_error(f"Comando falló después de {max_attempts} intentos: {cmd}")
+    print_error(f"CError after {max_attempts} attemps: {cmd}")
     return False
 
 def filter_bam_by_alignment_fraction(input_bam, output_bam, min_fraction=0.7):
     """
-    Filtra el BAM de entrada y escribe un nuevo BAM (output_bam) que solo contiene
-    aquellas lecturas cuyo porcentaje de bases alineadas (query_alignment_length / query_length)
-    sea al menos min_fraction (por defecto, 0.5 o 50%).
+    Filter the input BAM and write a new BAM (output_bam) containing only
+    reads whose percentage of aligned bases (query_alignment_length / query_length)
+    is at least min_fraction (default: 0.5 or 50%).
 
-    Parámetros:
-      input_bam (str): Ruta del BAM de entrada.
-      output_bam (str): Ruta del BAM filtrado de salida.
-      min_fraction (float): Fracción mínima de mapeo para conservar la lectura.
+    Parameters:
+      input_bam (str): Path to the input BAM.
+      output_bam (str): Path to the filtered output BAM.
+      min_fraction (float): Minimum mapping fraction required to keep the read.
     """
     in_bam = pysam.AlignmentFile(input_bam, "rb")
     out_bam = pysam.AlignmentFile(output_bam, "wb", header=in_bam.header)
 
     for read in in_bam.fetch():
-        # Si la lectura no está mapeada, se omite.
+        # If the read is unmapped, skip it.
         if read.is_unmapped:
             continue
         if read.is_secondary or read.is_supplementary:
             continue
         
-        # read.query_alignment_length: longitud de la parte alineada (excluye inserciones y clips)
-        # read.query_length: longitud total de la lectura
+        # read.query_alignment_length: length of the aligned portion (excluding insertions and clips)
+        # read.query_length: total read length
         if read.query_length > 0:
             fraction = float(read.query_alignment_length) / float(read.query_length)
         else:
@@ -178,14 +177,14 @@ def filter_bam_by_alignment_fraction(input_bam, output_bam, min_fraction=0.7):
 
 def run_bwa_mem(refseq, fastq1, fastq2, output_sam, output_bam, platform,min_fraction_align_reads):
     """
-    Ejecuta bwa mem (o minimap2, según plataforma) para generar un archivo SAM
-    y luego lo convierte a BAM. 
+    Run bwa mem or minimap2, depending on the platform, to generate a SAM file
+    and then convert it to BAM. 
     """
     try:
-        # Definir el read group correctamente
-        read_group = f"@RG\\tID:{Path(fastq1).stem}\\tSM:{Path(fastq1).stem}\\tLB:Lib\\tPL:ILLUMINA" #Path(fastq1).stem es una expresión de Python que usa el módulo pathlib para extraer el nombre base del archivo sin extensión
+        # Define the read group correctly
+        read_group = f"@RG\\tID:{Path(fastq1).stem}\\tSM:{Path(fastq1).stem}\\tLB:Lib\\tPL:ILLUMINA" #Path(fastq1).stem is a Python expression that uses pathlib to extract the base filename without extension
 
-        # Ajuste según la plataforma
+        # Adjustment according to the platform
         if platform == "ILLUMINA":
             if fastq2 is not None:
                 map_cmd = f"bwa mem -M -R '{read_group}' {refseq} {fastq1} {fastq2} > {output_sam}"
@@ -202,21 +201,21 @@ def run_bwa_mem(refseq, fastq1, fastq2, output_sam, output_bam, platform,min_fra
             else:  # Single End
                 map_cmd = f"minimap2 -ax map-pb -R '{read_group}' -t 8 {refseq} {fastq1} > {output_sam}"
         else:
-            raise ValueError(f"Plataforma no soportada: {platform}") #El comando raise en Python lanza una excepción manualmente. Se usa para indicar que ha ocurrido un error que impide que el programa continúe
+            raise ValueError(f"Not supported platform: {platform}") #The Python raise statement manually raises an exception and indicates that an error prevents the program from continuing
 
         print_substep(f"Ejecutando: {map_cmd}")
 
-        # Ejecutar el mapeo para generar el archivo .sam
+        # Run the mapping step to generate the .sam file
         result = subprocess.run(map_cmd, shell=True, stderr=subprocess.PIPE, text=True)
         if result.returncode != 0:
-            # Mostramos también stderr si falla
+            # Also show stderr if it fails
             print_output(f"[STDERR]: {result.stderr}")
             raise subprocess.CalledProcessError(result.returncode, map_cmd)
 
-        print(f"[INFO] Archivo SAM generado: {output_sam}")
+        print(f"[INFO] SAM file generated: {output_sam}")
 
-        # Convertir el archivo .sam a .bam
-        # Paso 1: Convertir SAM a BAM
+        # Convert the .sam file to .bam
+        # Step 1: Convert SAM to BAM
         intermediate_bam = str(output_bam).replace(".bam", "_intermediate.bam")
         samtools_view_cmd = f"samtools view -q 30 -bS {output_sam} -o {intermediate_bam}"
         print_substep(f"Ejecutando: {samtools_view_cmd}")
@@ -225,7 +224,7 @@ def run_bwa_mem(refseq, fastq1, fastq2, output_sam, output_bam, platform,min_fra
             print_output(f"[STDERR]: {result_view.stderr}")
             raise subprocess.CalledProcessError(result_view.returncode, samtools_view_cmd)
 
-        #Paso 2: Filtrar read por calidad de alineamiento (cobertura del read con la referencia)
+        #Step 2: Filter reads by alignment quality (read coverage against the reference)
         intermediate_bam_00 = str(output_bam).replace(".bam", "_intermediate_00.bam")
         sort_cmd = f"samtools sort -o {intermediate_bam_00} {intermediate_bam} "
         retry_command(MAX_DOWNLOAD_ATTEMPTS, sort_cmd)
@@ -234,8 +233,8 @@ def run_bwa_mem(refseq, fastq1, fastq2, output_sam, output_bam, platform,min_fra
         filter_bam_by_alignment_fraction(intermediate_bam_00,intermediate_bam_0,min_fraction_align_reads)
 
 
-        # Paso 2: Ordenar el BAM por coordenada (importante para mpileup)
-        # <-- ADAPTADO (quitamos "-n")
+        # Step 2: Sort the BAM by coordinate (important for mpileup)
+        # <-- ADAPTED (removed "-n")
         if fastq2 is not None:
             intermediate_bam_1 = str(output_bam).replace(".bam", "_intermediate_1.bam")
             sort_paired_cmd = f"samtools sort -n -o {intermediate_bam_1} {intermediate_bam_0} "
@@ -253,66 +252,64 @@ def run_bwa_mem(refseq, fastq1, fastq2, output_sam, output_bam, platform,min_fra
             print_output(f"[STDERR]: {result_sort.stderr}")
             raise subprocess.CalledProcessError(result_sort.returncode, samtools_sort_cmd)
 
-        print_substep(f"[INFO] Archivo BAM ordenado creado: {output_bam}")
+        print_substep(f"[INFO] BAM file created: {output_bam}")
 
-    except subprocess.CalledProcessError as e: #as e → Captura la excepción en la variable e para acceder a sus atributos
-        print(f"[ERROR] Error ejecutando: {e.cmd}\nCódigo de salida: {e.returncode}") #e.cmd → El comando que causó el error
+    except subprocess.CalledProcessError as e: #as e → Capture the exception in variable e to access its attributes
+        print(f"[ERROR] Error : {e.cmd}\nCódigo de salida: {e.returncode}") #e.cmd → The command that caused the error
         sys.exit(1)
     except Exception as e:
-        print(f"[ERROR] Error inesperado: {e}")
+        print(f"[ERROR] Error : {e}")
         sys.exit(1)
-
-#BLOQUE FUNCIÓN SCAN_REGION_FOR_POLYMORPHISMS - HAY QUE OPTIMIZAR MUCHO ESTO. TENGO EJEMPLOS DE CÓMO HACERLO EN CHATGPT (SALTO DE REFERENCIA EN PILEUP):
 
 def _get_base_or_indel_at_pos_indel(read, pos, ref_fasta=None, ref_name=None, noindel=False):
     """
-    Devuelve (evento, calidad) para la posición 'pos' (0-based) de la referencia.
+    Return (event, quality) for reference position 'pos' (0-based).
     
-    - Si noindel=True, se IGNORAN inserciones y deleciones:
-        * Solo se busca si existe una base en la lectura (qPos is not None).
-        * Si la hay, se devuelve esa base y su calidad.
-        * Si no la hay o hay deleción, se devuelve (None, None).
+    - If noindel=True, insertions and deletions are IGNORED:
+        * Only check whether a base exists in the read (qPos is not None).
+        * If present, return that base and its quality.
+        * If there is no base or there is a deletion, return (None, None).
     
-    - Si noindel=False, la lógica es la de siempre:
-        * Primero buscar inserción "entre pos-1 y pos" (código igual a antes).
-        * Luego buscar base/deleción en pos.
-        * Combinar si ambas existen: p.ej. "A+3ACT", "-1A+3ACT".
+    - If noindel=False, use the standard logic:
+        * First look for an insertion "between pos-1 and pos" ..
+        * Then look for a base/deletion at pos.
+        * Combine them if both exist: p.ej. "A+3ACT", "-1A+3ACT".
     """
 
     aligned_pairs = read.get_aligned_pairs(matches_only=False)
 
     # ----------------------------------------------------------------
-    # MODO "noindel" => SOLO BASES
+    # "noindel" MODE => BASES ONLY
     # ----------------------------------------------------------------
     if noindel:
         for qPos, rPos in aligned_pairs:
             if rPos == pos:
-                # Si en esta posición la lectura aporta base (qPos no es None),
-                # devolvemos (base, calidad). Ignoramos inserciones/deleciones.
+                # If the read contributes a base at this position (qPos is not None),
+                # return (base, quality). Ignore insertions/deletions.
                 if qPos is not None:
                     base_str  = read.query_sequence[qPos].upper()
                     base_qual = read.query_qualities[qPos]
                     return (base_str, base_qual)
                 else:
-                    # Hay deleción -> ignorarla
+                    # There is a deletion -> ignore it
                     pass
-        # Si llegamos aquí, no había base en la posición => devolvemos None
+        # If we reach this point, there was no base at the position => return None
         return (None, None)
 
     # ----------------------------------------------------------------
-    # MODO NORMAL => DETECTAR INSERCIONES + BASE/DELECIÓN
+    # NORMAL MODE => DETECT INSERTIONS + BASE/DELETION
     # ----------------------------------------------------------------
     insertion_str  = None
     insertion_qual = None
 
-    # (1) Buscar INSERCIÓN entre pos-1 y pos
+    # (1) Look for an INSERTION between pos-1 and pos
     for i in range(len(aligned_pairs) - 1):
         q1, r1 = aligned_pairs[i]
         q2, r2 = aligned_pairs[i + 1]
 
         # "Entre pos-1 y pos": r1 == pos y r2 is None...
         if r1 is not None and r1 == pos and r2 is None and q2 is not None:
-            # Detectar inserción
+            # Detect insertion
             ins_qpos = [q2]
             j = i + 1
             while (j + 1) < len(aligned_pairs):
@@ -327,24 +324,24 @@ def _get_base_or_indel_at_pos_indel(read, pos, ref_fasta=None, ref_name=None, no
             ins_seq = ''.join(read.query_sequence[q].upper() for q in ins_qpos)
             insertion_str  = f"+{ins_len}{ins_seq}"
 
-            # EN LUGAR DE USAR LA PRIMERA, TOMAMOS LA CALIDAD MÍNIMA DE TODAS LAS BASES
+            # INSTEAD OF USING THE FIRST ONE, TAKE THE MINIMUM QUALITY ACROSS ALL BASES
             ins_quals = [read.query_qualities[q] for q in ins_qpos]
             insertion_qual = min(ins_quals)
 
-            break  # Tomamos solo la primera inserción que encontremos
+            break  # Take only the first insertion found
 
-    # (2) Buscar base o deleción en 'pos'
+    # (2) Look for a base or deletion at 'pos'
     base_str  = None
     base_qual = None
 
     for i, (qPos, rPos) in enumerate(aligned_pairs):
         if rPos == pos:
             if qPos is not None:
-                # => hay base
+                # => there is a base
                 base_str  = read.query_sequence[qPos].upper()
                 base_qual = read.query_qualities[qPos]
             else:
-                # => deleción
+                # => deletion
                 ref_positions = [pos]
                 j = i
                 while (j + 1) < len(aligned_pairs):
@@ -361,21 +358,21 @@ def _get_base_or_indel_at_pos_indel(read, pos, ref_fasta=None, ref_name=None, no
                     base_str = f"-{del_len}{del_seq}"
                 else:
                     base_str = f"-{del_len}"
-                base_qual = 0  # Calidad 0 (por convención en deleciones)
+                base_qual = 0  # Quality 0 (by convention for deletions)
 
             break
 
-    # (3) Combinar resultados según lo que se haya encontrado
+    # (3) Combine results according to what was found
     if not base_str and not insertion_str:
         return (None, None)
 
     if base_str and insertion_str:
         # Ej: "A+3ACT" o "-1A+3ACT"
         combined_str = base_str + insertion_str
-        # Elegir calidad
+        # Choose quality
         if base_qual == 0 and insertion_qual is not None:
-            # Ej. si la base es una deleción => 0, 
-            # entonces asignamos la calidad de la inserción
+            # E.g. if the base is a deletion => 0, 
+            # then assign the insertion quality
             final_qual = insertion_qual
         else:
             final_qual = base_qual
@@ -407,18 +404,16 @@ def parse_deletion(deletion_str):
 
 def is_continuation(deletion_current, deletion_prev, delta):
     """
-    Retorna True si 'deletion_current' es una continuación de 'deletion_prev'
-    considerando que la diferencia de posiciones es delta.
-    Es decir, si deletion_prev = "-5CTTCT" y delta = 1, se espera que deletion_current sea "-4TTCT".
-    No hace falta gestionar las delecciones con inserciones después porque estas son de una sola base y, aúnque pueden estar repetidas con dos bases en la posición anterior la necesitamos para nombrar la inserción.
+    Return True if 'deletion_current' is a continuation of 'deletion_prev'
+    considering that the positional difference is delta.
     """
-    n_prev, seq_prev = parse_deletion(deletion_prev) #devuelve tamaño de la deleccion y secuencia
+    n_prev, seq_prev = parse_deletion(deletion_prev) #returns deletion size and sequence
     n_cur, seq_cur = parse_deletion(deletion_current)
     if n_prev is None or n_cur is None:
         return False
-    if n_prev != n_cur + delta: #El tamaño de la delección de ahora más delta tiene que ser igual al tamaño de la deleccion ya anotada
+    if n_prev != n_cur + delta: #The size of the current deletion plus delta must match the size of the previously annotated deletion
         return False
-    if seq_prev[delta:] == seq_cur: #devuelve la secuencia a partir de delta, es decir lo que debería ser esa secuencia sin la diferencia (la parte no común)
+    if seq_prev[delta:] == seq_cur: #returns the sequence from delta onward, i.e. what that sequence should be without the difference (the non-common part)
         return True
     return False
 
@@ -440,20 +435,20 @@ def scan_region_for_polymorphisms(
     for pos in tqdm(posiciones_a_analizar):
         base_reads = defaultdict(set)
 
-        # 1) Recolectar lecturas
+        # 1) Collect reads
         for read in bam.fetch(ref_name, pos, pos + 1):
             if read.is_unmapped:
                 continue
             if read.is_secondary or read.is_supplementary:
                 continue
 
-            # Actualizar min/max
+            # Update min/max
             r_start = read.reference_start
             r_end   = read.reference_end
             if read.query_name not in read_minmax:
                 read_minmax[read.query_name] = [r_start, r_end]
             else:
-                # (Opcional) Ajustar si la lectura abarca más
+                # (Optional) Adjust if the read spans more
                 if r_start < read_minmax[read.query_name][0]:
                     read_minmax[read.query_name][0] = r_start
                 if r_end > read_minmax[read.query_name][1]:
@@ -465,14 +460,14 @@ def scan_region_for_polymorphisms(
             if not base_str:
                 continue
 
-            # Filtrar por calidad si no es deleción
+            # Filter by quality if it is not a deletion
             if not base_str.startswith('-') and base_qual < min_base_qual:
                 continue
 
             base_reads[base_str].add(read.query_name)
             len_reads.append(len(read.query_sequence))
 
-        # 2) Eliminar lecturas conflictivas (las que estén en >1 variante)
+        # 2) Remove conflicting reads (those assigned to >1 variant)
         read_to_variants = defaultdict(list)
         for variant, rset in base_reads.items():
             for read_name in rset:
@@ -480,18 +475,18 @@ def scan_region_for_polymorphisms(
 
         for read_name, variants_list in read_to_variants.items():
             if len(variants_list) > 1:
-                # Eliminar esa lectura de todas las variantes
+                # Remove that read from all variants
                 for v in variants_list:
                     base_reads[v].discard(read_name)
 
-        # 3) Filtrar por min_reads
+        # 3) Filter by min_reads
         passing_bases = {
             variant: rnames
             for variant, rnames in base_reads.items()
             if len(rnames) >= min_reads
         }
 
-        # 4) Filtrar deleciones continuas
+        # 4) Filter continuous deletions
         keys_to_remove = []
         for variant in list(passing_bases.keys()):
             if variant.startswith('-'):
@@ -509,94 +504,93 @@ def scan_region_for_polymorphisms(
         for k in keys_to_remove:
             passing_bases.pop(k, None)
 
-        # 5) Guardar solo si >= 2 variantes
+        # 5) Save only if there are >= 2 variants
         if len(passing_bases) >= 2:
             results[pos] = passing_bases
 
     bam.close()
 
-    # Convertir read_minmax en lista
+    # Convert read_minmax into a list
     reads_in_fin = []
     for read_name, (st, en) in read_minmax.items():
         reads_in_fin.append((st, en))
 
-    # Devolver lo de siempre
+    # Return the usual output
     return results, max(len_reads), reads_in_fin
 
 
-#FIN BLOQUE FUNCIÓN SCAN_REGION_FOR_POLYMORPHISMS
-#INICIO BLOQUE FUNCIÓN COMPARAR_POSICIONES_CONSECUTIVAS:
+#END FUNCTION BLOCK SCAN_REGION_FOR_POLYMORPHISMS
+#START FUNCTION BLOCK COMPARAR_POSICIONES_CONSECUTIVAS:
 
 def is_indel(variant):
-    # Función para saber si un variant es un indel (inserción o deleción)
+    # Function to check whether a variant is an indel (insertion or deletion)
     return variant.startswith('-') or '+' in variant
     
-    # Esta función determina cómo formatear una variante en el "detalle".
-    #  - Si no es inserción, la devuelve igual.
-    #  - Si es inserción, mira si hay un "X+Nseq" con X siendo 1 nucleótido.
-    #    y X aparece como variante "sola" en variants_dict => quita X, dejando "+Nseq".
+    # This function determines how to format a variant in the "detail" field.
+    #  - If it is not an insertion, return it unchanged.
+    #  - If it is an insertion, check whether there is an "X+Nseq" where X is one nucleotide.
+    #    and X appears as a standalone variant in variants_dict => remove X, leaving "+Nseq".
 
 def format_variant(variants_dict, variant):
-    # 1) Si no es inserción, lo devolvemos tal cual
-    #    (deleción => se queda, base => se queda).
+    # 1) If it is not an insertion, return it unchanged
+    #    (deletion => keep it, base => keep it).
     if not '+' in variant:
         return variant
         
-    # En "A+2CT"...
-    #   - la "A" es la parte previa
-    #   - comprobamos si "A" existe como variante "sola" en variants_dict
-    #   - si sí, devolvemos "+2CT", si no, devolvemos "A+2CT"
-    # LÓGICA:
-    # Buscamos el primer '+' y separamos
+    # In "A+2CT"...
+    #   - the "A" is the previous part
+    #   - check whether "A" exists as a standalone variant in variants_dict
+    #   - if yes, return "+2CT"; otherwise, return "A+2CT"
+
     
     idx_plus = variant.find('+')   
-    # base_previa es todo lo que esté antes del '+'
+    # base_previa is everything before '+'
     base_previa = variant[:idx_plus]
-    # Resto es la parte con '+' inclusive
+    # The rest is the part including '+'
     insercion = variant[idx_plus:]  # p.ej. "+2CT"
 
-    # y existe como variante sola => devolvemos solo la parte de la inserción
+    # and it exists as a standalone variant => return only the insertion part
     if base_previa in variants_dict:
-        # hay una variante "A" sola => quitamos la base previa
+        # there is a standalone "A" variant => remove the previous base
         return insercion
     else:
-        # mantenemos la base previa
+        # keep the previous base
         return variant
 
 def check_comparacion_custom(posA, polyA, posB, polyB):
     """
-    Realiza la prueba de 4 gametos entre posA y posB.
+    Perform the four-gamete test between posA and posB.
     
-    Retorna (resultado, detalle), donde:
-      - resultado = True/False/None
-      - detalle:
-         * Si True:  "vA1.vA2,vB1.vB2 / vA1'.vA2',vB1'.vB2' / ..." 
-                    (para cada quadrupla que formó 4 gametos)
-         * Si False: 
-             - si TODAS las intersecciones son indel-based => "posAIndels,posBIndels"
-             - de lo contrario => ""
-         * Si None:  "" (sin intersecciones)
+    Return (result, detail), where:
+      - result = True/False/None
+      - detail:
+         * If True:  "vA1.vA2,vB1.vB2 / vA1'.vA2',vB1'.vB2' / ..." 
+                    (for each quadruple that formed four gametes)
+         * If False: 
+             - if ALL intersections are indel-based => "posAIndels,posBIndels"
+             - otherwise => ""
+         * If None:  "" (no intersections)
          
     EXTRA:
-      - En inserciones tipo "A+2CT", si "A" existe sola en esa posición, 
-        no se escribe ("+2CT" en su lugar). Si no existe sola, se deja "A+2CT".
+      - For insertions of type "A+2CT", if "A" exists alone at that position, 
+        it is not written ("+2CT" instead). If it does not exist alone, keep "A+2CT".
     """
-    # 1) Cobertura en cada posición (suma de todos los sets de variantes)
+    # 1) Coverage at each position (sum of all variant sets)
     coverageA = sum(len(rset) for rset in polyA.values())
     coverageB = sum(len(rset) for rset in polyB.values())
     coverage_min = min(coverageA, coverageB)    
 
 
-    # Variables de control
-    any_intersection = False       # Para saber si hubo al menos una intersección
-    only_indels = True            # Se mantendrá True si en TODAS las intersecciones hay un indel en A o B
-    posA_indels = set()           # Indels encontrados en posA
-    posB_indels = set()           # Indels encontrados en posB
+    # Control variables
+    any_intersection = False       # To check whether there was at least one intersection
+    only_indels = True            # Will remain True if all intersections contain an indel in A or B
+    posA_indels = set()           # Indels found in posA
+    posB_indels = set()           # Indels found in posB
 
-    # Almacena las quadruplas que SÍ forman los 4 gametos
+    # Store the quadruples that DO form the four gametes
     quadruplas_ok = []
 
-    # Almacena información para la repetición con otros parámetros mas restrictivos
+    # Store information for reruns with more restrictive parameters
     gametos_data = {} 
 
     variantesA = list(polyA.keys())  # p.ej. ["A", "G", "A+2CT", "-3C", ...]
@@ -611,7 +605,7 @@ def check_comparacion_custom(posA, polyA, posB, polyB):
                 (vA2, vB2): False
             }
 
-            # Revisar intersecciones
+            # Check intersections
             for (gA, gB) in gametos:
                 readsA = polyA[gA]
                 readsB = polyB[gB]
@@ -619,41 +613,41 @@ def check_comparacion_custom(posA, polyA, posB, polyB):
                 
                 inter_count=len(inter)
 
-                # Filtro 1: umbral de lecturas mínimas
+                # Filter 1: minimum read threshold
                 enough_reads = (inter_count >= reads_gametos_minoritarios)
                 
-                # Filtro 2: umbral de frecuencia (respecto a coverage_min)
-                # coverage_min puede ser 0; evitar división por cero
+                # Filter 2: frequency threshold (relative to coverage_min)
+                # coverage_min may be 0; avoid division by zero
                 if coverage_min > 0:
                     freq = inter_count / coverage_min
                 else:
                     freq = 0.0
                 
-                # Filtro por frecuencia menos restrictiva (ej. >= 0.1 => 10%)
+                # Less restrictive frequency filter (ej. >= 0.1 => 10%)
                 enough_freq = (freq >= THRESHOLD_GAMETO_FREQ)
 
-                # Guardamos la info de este gameto
-                # Usa (gA,gB) como clave en gametos_data
+                # Store the information for this gamete
+                # Use (gA,gB) as the key in gametos_data
                 gametos_data[(gA, gB)] = {"intersect_count": inter_count, "freq": freq}
 
                 if enough_reads and enough_freq:
                     gametos[(gA, gB)] = True
                     any_intersection = True
-                    # Revisar si hay un indel en gA o gB
+                    # Check whether there is an indel in gA or gB
                     if not (is_indel(gA) or is_indel(gB)):
                         only_indels = False
                     else:
-                        # si gA es un indel => lo guardamos en posA_indels
+                        # if gA is an indel => store it in posA_indels
                         if is_indel(gA):
                             posA_indels.add(gA)
-                        # si gB es un indel => lo guardamos en posB_indels
+                        # if gB is an indel => store it in posB_indels
                         if is_indel(gB):
                             posB_indels.add(gB)
 
-            # Si se cumplieron los 4 gametos
+            # If all four gametes were found
             if all(gametos.values()):
-                # Construir la salida "vA1.vA2,vB1.vB2"
-                # pero formateando cada uno con format_variant
+                # Build the output "vA1.vA2,vB1.vB2"
+                # but format each one with format_variant
                 fmtA1 = format_variant(polyA, vA1)
                 fmtA2 = format_variant(polyA, vA2)
                 fmtB1 = format_variant(polyB, vB1)
@@ -662,19 +656,19 @@ def check_comparacion_custom(posA, polyA, posB, polyB):
                 combos_str = f"{fmtA1}.{fmtA2},{fmtB1}.{fmtB2}"
                 quadruplas_ok.append(combos_str)
 
-    # Determinar el resultado
+    # Determine the result
     if quadruplas_ok:
-        # => tenemos al menos una quadrupla con 4 gametos
+        # => we have at least one quadruple with four gametes
         detalle = "/".join(quadruplas_ok)
         return (True, detalle)
     else:
-        # => no se formaron 4 gametos
+        # => four gametes were not formed
         if any_intersection:
-            # => hubo cruces
+            # => there were intersections
             if only_indels:
-                # => todas las intersecciones son indel-based
-                # formatear la lista de indels
-                # y, en cada uno, aplicar format_variant
+                # => all intersections are indel-based
+                # format the indel list
+                # and apply format_variant to each one
                 if posA_indels:
                     posA_str = "/".join(sorted(format_variant(polyA, ind) for ind in posA_indels))
                 else:
@@ -687,28 +681,28 @@ def check_comparacion_custom(posA, polyA, posB, polyB):
 
                 return (False, f"{posA_str},{posB_str}")
             else:
-                # => hubo alguna intersección base-base => sin detalle
+                # => there was at least one base-base intersection => no detail
                 return (False, "")
         else:
-            # => ninguna intersección => None
+            # => no intersection => None
             return (None, "")
 
 def comparar_posiciones_consecutivas(dic_pol_pos):
     """
-    Compara pares de posiciones consecutivas en dic_pol_pos usando 
-    check_comparacion_custom, que devuelve (resultado, detalle).
+    Compare pairs of consecutive positions in dic_pol_pos using 
+    check_comparacion_custom, which returns (result, detail).
     
-    Parámetros:
+    Parameters:
       dic_pol_pos (dict): {pos -> {variante: set(read_names), ...}}
       
-    Retorna:
+    Return:
       dict: {
           'True':  [(posA, posB, detalle), ...],
           'False': [(posA, posB, detalle), ...],
           'None':  [(posA, posB, detalle), ...]
       }
-      donde:
-        - detalle es la cadena devuelta por check_comparacion_custom (p.ej. "A.G,B.T/...").
+      where:
+        - detalle is the string returned by check_comparacion_custom (p.ej. "A.G,B.T/...").
     """
 
     comparaciones = {
@@ -717,10 +711,10 @@ def comparar_posiciones_consecutivas(dic_pol_pos):
         'None': []
     }
 
-    # Obtener las posiciones ordenadas
+    # Get the sorted positions
     sorted_positions = sorted(dic_pol_pos.keys())
 
-    # Iterar sobre pares de posiciones consecutivas
+    # Iterate over pairs of consecutive positions
     for i in range(len(sorted_positions) - 1):
         posA = sorted_positions[i]
         posB = sorted_positions[i + 1]
@@ -728,10 +722,10 @@ def comparar_posiciones_consecutivas(dic_pol_pos):
         polyA = dic_pol_pos[posA]
         polyB = dic_pol_pos[posB]
 
-        # Llamamos a check_comparacion_custom, que retorna (resultado, detalle)
+        # Call check_comparacion_custom, which returns (result, detail)
         resultado, detalle = check_comparacion_custom(posA, polyA, posB, polyB)
 
-        # Almacenar según el valor de 'resultado'
+        # Store according to the value of 'result'
         if resultado is True:
             comparaciones['True'].append((posA, posB, detalle))
         elif resultado is False:
@@ -741,54 +735,53 @@ def comparar_posiciones_consecutivas(dic_pol_pos):
 
     return comparaciones
 
-#FIN BLOQUE FUNCIÓN COMPARAR_POSICIONES_CONSECUTIVAS
-#FUNCIÓN EXCLUSIVA IMPLEMENTACIÓN FAST:
+#END FUNCTION BLOCK COMPARAR_POSICIONES_CONSECUTIVAS
+#FAST IMPLEMENTATION-SPECIFIC FUNCTION:
 def extract_polymorphic_fastq(bam_path, ref_name, posiciones_a_analizar, output_fastq, min_reads=5, ref_fasta_path=None,noindel=False):
     """
-    Extrae los reads que mapean en posiciones polimórficas dentro de la región [start, end)
-    del archivo BAM y genera un archivo FASTQ con dichos reads.
+    Extract reads mapping to polymorphic positions within the region [start, end)
+    from the BAM file and generate a FASTQ file with those reads.
     
-    Parámetros:
-      bam_path: Ruta al archivo BAM.
-      ref_name: Nombre de la referencia (ej: "NC_045512.2").
-      start: Posición inicial (0-based).
-      end: Posición final (0-based, no inclusiva).
-      output_fastq: Ruta del archivo FASTQ resultante.
-      min_reads: Mínimo número de reads necesarios para considerar una base/indel.
-      ref_fasta_path: (Opcional) Ruta al archivo FASTA de la referencia, para extraer la secuencia real
-                      en caso de deleciones.
+    Parameters:
+      bam_path: Path to the BAM file.
+      ref_name: Reference name (ej: "NC_045512.2").
+      start: Start position (0-based).
+      end: End position (0-based, no inclusiva).
+      output_fastq: Path to the resulting FASTQ file.
+      min_reads: Minimum number of reads required to consider a base/indel.
+      ref_fasta_path: (Optional) Path to the reference FASTA file, used to extract the real sequence
+                      in case of deletions.
     """
-    # Abrir el FASTA de referencia si se proporciona la ruta.
+    # Open the reference FASTA if the path is provided.
     ref_fasta = pysam.FastaFile(ref_fasta_path) if ref_fasta_path else None
 
-    # Obtener las posiciones polimórficas utilizando la función ya definida.
+    # Obtain polymorphic positions using the previously defined function.
     polymorphic_positions,max_len_reads, reads_in_fin = scan_region_for_polymorphisms(bam_path, ref_name, posiciones_a_analizar, min_reads, ref_fasta, min_base_qual, noindel)
     
-    # Cerrar el FASTA si se abrió.
+    # Close the FASTA if it was opened.
     if ref_fasta:
         ref_fasta.close()
     
-    # Reunir los nombres de todos los reads que aportan una base/indel en posiciones polimórficas.
+    # Collect the names of all reads contributing a base/indel at polymorphic positions.
     reads_of_interest = set()
     for pos, bases in polymorphic_positions.items():
         for rnames in bases.values():
             reads_of_interest.update(rnames)
     
     if not reads_of_interest:
-        print("[INFO] No se encontraron reads de interés en la región especificada.")
+        print("[INFO] No reads of interest were found in the specified region.")
         return
 
-    # Guardar la lista de reads en un archivo temporal (uno por línea)
+    # Save the read list to a temporary file (one per line)
     with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp:
         tmp_list = tmp.name
         for rname in reads_of_interest:
             tmp.write(rname + "\n")
     
-    # Construir el comando para extraer los reads de interés y generar un FASTQ.
-    # El comando hace lo siguiente:
-    #  1) samtools view -h -F 4: extrae las lecturas mapeadas (con cabecera)
-    #  2) awk: filtra aquellas líneas cuyo primer campo (nombre del read) esté en el archivo temporal.
-    #  3) samtools fastq -: convierte el SAM filtrado a FASTQ, escribiendo en el archivo de salida.
+    # Build the command to extract reads of interest and generate a FASTQ file.
+    #  1) samtools view -h -F 4: extract mapped reads (with header)
+    #  2) awk: filter lines whose first field (read name) is in the temporary file.
+    #  3) samtools fastq -: convert the filtered SAM to FASTQ and write it to the output file.
     cmd = (
         f"samtools view -h -F 4 {bam_path} | "
         f"awk 'BEGIN{{while((getline line < \"{tmp_list}\")>0) r[line]=1}} "
@@ -796,21 +789,21 @@ def extract_polymorphic_fastq(bam_path, ref_name, posiciones_a_analizar, output_
         f"samtools fastq - > {output_fastq}"
     )
     
-    print(f"Ejecutando: {cmd}")
+    print(f": {cmd}")
     
     try:
         subprocess.run(cmd, shell=True, check=True, executable='/bin/bash')
-        print(f"[INFO] Archivo FASTQ con reads de interés generado: {output_fastq}")
+        print(f"[INFO] FASTQ file generated: {output_fastq}")
     except subprocess.CalledProcessError as e:
-        print(f"[ERROR] No se pudo generar el archivo FASTQ de reads de interés: {e}")
+        print(f"[ERROR]  {e}")
         sys.exit(1)
     finally:
-        # Eliminar el archivo temporal de la lista de reads.
+        # Remove the temporary read-list file.
         os.remove(tmp_list)
 
-#FIN FUNCIÓN EXLUSIVA IMPLEMENTACIÓN FASTA
+#END FASTA IMPLEMENTATION-SPECIFIC FUNCTION
 
-#INICIO FUNCIONES USO DE PILEUP
+#START PILEUP-RELATED FUNCTIONS
 
 def quick_check_col5(bases_str,MIN_READS):
 
@@ -827,7 +820,7 @@ def quick_check_col5(bases_str,MIN_READS):
             i += 1
 
         elif c == '^':
-            # saltar '^' + mapQuality
+            # skip '^' + mapQuality
             i += 2
 
         elif c == '$':
@@ -837,7 +830,7 @@ def quick_check_col5(bases_str,MIN_READS):
             sign = c
             i += 1
             num_str = ''
-            # leer la longitud
+            # read the length
             while i < length and bases_str[i].isdigit():
                 num_str += bases_str[i]
                 i += 1
@@ -851,7 +844,7 @@ def quick_check_col5(bases_str,MIN_READS):
                 b = sign + indel_seq  # e.g. +AC
                 base_counts[b] = base_counts.get(b, 0) + 1
             else:
-                # no hay número, ignorar
+                # no number, ignore
                 continue
         
         elif c.upper() in ('A', 'C', 'G', 'T'):
@@ -860,55 +853,55 @@ def quick_check_col5(bases_str,MIN_READS):
             i += 1
 
         else:
-            # Caracter que no contemplamos -> lo ignoramos
+            # Unsupported character -> ignore it
             i += 1
 
     bases_cumplen = [b for b,cnt in base_counts.items() if cnt >= MIN_READS]
     return (len(bases_cumplen) >= 2)
 
 
-def parse_pileup_and_extract_polimorfismos(pileup_file, MIN_READS): #HAY QUE VER SI ESTO ES 0-BASED O NO? POR EJEMPLO CON ESTE MÉTODO ESTAMOS SELECCIONANDO LA POSICIÓN 701 COMO LA PRIMERA, CON EL OTRO SELECCIONÁBAMOS LA POSICIÓN 700. -> AHORA LO AJUSTÉ A 1-BASED -> CONTÉ LAS POSICIONES SOBRE LA REFERENCIA Y LA 39 (1-BASED) ERA TAMBIÉN LA 39 EN EL PILEUP
+def parse_pileup_and_extract_polimorfismos(pileup_file, MIN_READS): 
     with open(pileup_file, 'r') as f:
         posiciones_polimorficas = []
 
         for line in f:
             fields = line.strip().split('\t')
             print_verbose(fields)
-            if len(fields) < 6: #HAY QUE CAMBIAR ESTO SI DESPUÉS NO SACO LOS NOMBRES DE LAS LECTURAS
+            if len(fields) < 6: 
                 continue
             pos = int(fields[1])
-            #print(f"Posición: {pos}")
+            #print(f"Position: {pos}")
             bases = str(fields[4])
             if len(bases) < (MIN_READS*2):
                 continue
             polimorfismo_si_o_no = quick_check_col5(bases,MIN_READS)
             if polimorfismo_si_o_no:
                 print_verbose(f"Posición analizada: {pos}, bases analizadas: {bases}")
-                posiciones_polimorficas.append(pos-1) #Ajusto a 0-based para leer con pysam
+                posiciones_polimorficas.append(pos-1) #Adjust to 0-based coordinates for reading with pysam
 
     return posiciones_polimorficas
 
-#FIN FUNCIONES USO DE PILEUP
-#INICIO FUNCIONES ALGORITMO DE BÚSQUEDA
+#END PILEUP-RELATED FUNCTIONS
+#START SEARCH-ALGORITHM FUNCTIONS
 def construir_distribuciones(dic_pol_pos):
     """
-    Convierte dic_pol_pos (pos -> {base -> set(reads), ...})
-    en un dict pos -> { base -> porcentaje }.
+    Convert dic_pol_pos (pos -> {base -> set(reads), ...})
+    into a dict pos -> { base -> percentage }.
 
-    Verifica que ningún read aparezca en varias variantes de la misma pos,
-    calcula (#reads_variant / total_reads). 
-    Imprime el resultado para depuración.
+    Verify that no read appears in multiple variants at the same position,
+    calculate (#reads_variant / total_reads). 
+    Print the result for debugging.
     """
     distributions_por_pos = {}
 
-    print_substep("Construyendo distribuciones de polimorfismos ...")
+    print_substep("Building polymorphism distributions ...")
     for pos, variant_dict in tqdm(dic_pol_pos.items()):
         all_reads = set()
         for variant, rset in variant_dict.items():
             for r in rset:
-                if r in all_reads: #HAY QUE DESCOMENTAR ESTO CUANDO TERMINE DE ADAPTAR EL CÓDIGO Y VER POR QUÉ HAY READS REPETIDOS
+                if r in all_reads:
                     raise ValueError(
-                        f"Read '{r}' aparece en múltiples variantes en la posición {pos}."
+                        f" '{r}' {pos}."
                     )
                 all_reads.add(r)
 
@@ -922,20 +915,20 @@ def construir_distribuciones(dic_pol_pos):
 
         distributions_por_pos[pos] = dist
 
-    print_verbose(f"\n[DEBUG] Distributions por posición: {distributions_por_pos}")
+    print_verbose(f"\n[DEBUG] Distributions by position: {distributions_por_pos}")
     return distributions_por_pos
 
 
 def generar_todos_grupos_por_ventana(positions, max_read_length, min_size=2):
     """
-    Genera TODAS las 'ventanas' (subconjuntos) donde 
+    Generate ALL 'windows' (subsets) where 
     (pos_final - pos_inicial) <= max_read_length.
     
-    Luego elimina aquellas ventanas que son un 
-    subconjunto estricto de otra ventana mayor.
+    Then remove windows that are a 
+    strict subset of a larger window.
     """
 
-    # == PARTE 1: Generar ventanas como antes ==
+    # == PART 1: Generate windows as before ==
     sorted_positions = sorted(positions)
     todos_grupos = []
     n = len(sorted_positions)
@@ -953,79 +946,75 @@ def generar_todos_grupos_por_ventana(positions, max_read_length, min_size=2):
         if len(grupo_actual) >= min_size:
             todos_grupos.append(grupo_actual)
 
-    # == PARTE 2: Eliminar subconjuntos ==
-    # 1) Ordenar descendentemente por tamaño
+    # == PART 2: Remove subsets ==
+    # 1) Sort by size in descending order
     todos_grupos_ordenados = sorted(todos_grupos, key=len, reverse=True)
 
-    # 2) Recorremos en orden grande->pequeño
+    # 2) Iterate from largest to smallest
     ventanas_finales = []
     for v in todos_grupos_ordenados:
-        # Si 'v' es subconjunto estricto de alguna en 'ventanas_finales', REVISAR Y ENTENDER BIEN ESTE CÓDIGO -> FUNCIONA, PERO HAY QUE ENTENDERLO
-        # la descartamos
-        # Sino, la añadimos
+        # If 'v' is a strict subset of any element in 'ventanas_finales'
+        # discard it
+        # Otherwise, add it
         if not any((v < x) for x in ventanas_finales):
             # 'v < x' significa v.issubset(x) y v != x
             ventanas_finales.append(v)
 
-    # 3) Opcionalmente, podríamos reordenar 'ventanas_finales' 
-    #    según tu preferencia (por tamaño asc/desc o 
-    #    volver al orden en que se generaron).
-    #    Aquí las dejamos en orden descendente por tamaño:
     return ventanas_finales
 
 ##############################################################################
-# 1.A - Ignora la base: compara fracciones
+# 1.A - Ignore the base: compare fractions
 ##############################################################################
 
 def agrupar_por_distribucion_individual(distributions_por_pos, threshold=0.05):
     """
-    Agrupa posiciones basándose en las fracciones individuales de su distribución.
+    Group positions based on the individual fractions in their distribution.
     
-    Para cada posición (ej. 100, 101, etc.), para cada base (ej. 'A', 'G', etc.) y su porcentaje,
-    se intenta agregar la posición a un grupo existente cuyo promedio (para esa sub-distribución)
-    esté dentro del umbral (threshold) de la fracción de la posición.
+    For each position (e.g. 100, 101), each base (e.g. 'A', 'G') and its percentage,
+    try to add the position to an existing group whose average (for that sub-distribution)
+    is within the threshold (threshold) of the position fraction.
     
-    Cada grupo se representa como un diccionario con:
-       - 'promedio': valor numérico (float) que es la media de las fracciones en el grupo.
-       - 'posiciones': un set con las posiciones que han contribuido.
+    Each group is represented as a dictionary with:
+       - 'promedio': numeric value (float) that is the mean of the fractions in the group.
+       - 'posiciones': a set with the positions that contributed.
        
-    Cuando se añade una nueva posición, se actualiza el promedio:
-       nuevo_promedio = (promedio * N + porcentaje_actual) / (N+1),
-       donde N es el número de posiciones ya en el grupo.
+    When a new position is added, the average is updated:
+       new_average = (promedio * N + current_percentage) / (N+1),
+       where N is the number of positions already in the group.
     
-    Si la posición no encaja en ningún grupo para esa fracción, se crea un grupo nuevo.
+    If the position does not fit any group for that fraction, a new group is created.
     
-    Al finalizar, se eliminan los grupos que sean estrictamente iguales o subconjuntos de otros.
+    At the end, groups that are exactly equal to or subsets of others are removed.
     
-    Retorna una lista de grupos.
+    Return a list of groups.
     """
-    grupos = []  # Cada grupo es un diccionario: {'promedio': float, 'posiciones': set(), 'base': base}
+    grupos = []  # Each group is a dictionary: {'promedio': float, 'posiciones': set(), 'base': base}
     
-    print_verbose(f"\n------------------------NUEVA VENTANA: Distribuciones por pos:\n {distributions_por_pos}\n")
+    print_verbose(f"\n------------------------Distritutions by pos:\n {distributions_por_pos}\n")
 
-    # Procesamos las posiciones en orden creciente (aunque el orden puede no importar)
+    # Process positions in increasing order (although the order may not matter)
     for pos in sorted(distributions_por_pos.keys()):
         print_verbose(f"\nPOSICIÓN: {pos}")
         dist = list(set(distributions_por_pos[pos].values())) #Ejemplo [0.6, 0.4]
         print_verbose(f"DIST: {dist}")
-        # Para cada base y su porcentaje en la posición:
+        # For each base and its percentage at the position:
         for porcentaje in dist:
             print_verbose(f"Porcentaje: {porcentaje}, grupos len: {len(grupos)}")
             if len(grupos) > 0 and any(abs(porcentaje - grupo['promedio']) <= threshold for grupo in grupos):
                 for grupo in grupos:
                     if abs(porcentaje - grupo['promedio']) <= threshold:
                         grupo['posiciones'].add(pos)
-                        print_verbose(f"Anterior media: {grupo['promedio']}, ajustando con el porcentaje: {porcentaje}")
+                        print_verbose(f"Last media: {grupo['promedio']}: {porcentaje}")
                         N = len(grupo['posiciones'])
                         grupo['promedio'] = (grupo['promedio'] * (N - 1) + porcentaje) / N
-                        print_verbose(f"Nueva media: {grupo['promedio']}")
+                        print_verbose(f"New media: {grupo['promedio']}")
             else:
-                print_verbose("No existe el grupo: Creando ...")
+                print_verbose("The group does not exist: creating ...")
                 nuevo_grupo = {'promedio': porcentaje, 'posiciones': {pos}}
                 print_verbose(f"Nuevo grupo: {nuevo_grupo}")
                 grupos.append(nuevo_grupo)               
     
-    print_verbose(f"Grupos no ordenados: {grupos}")
+    print_verbose(f"Disorder groups: {grupos}")
 
     grupos = sorted(grupos, key=lambda grupo: len(grupo['posiciones']), reverse=True)
 
@@ -1034,26 +1023,23 @@ def agrupar_por_distribucion_individual(distributions_por_pos, threshold=0.05):
     grupos_finales = []
     for grupo in grupos:
         pos_set = grupo['posiciones']
-        # Si existe en grupos_finales otro grupo cuyo conjunto de posiciones es mayor y contiene pos_set,
-        # entonces descartamos este grupo.
-        if not any(pos_set == otro['posiciones'] for otro in grupos_finales): #poner <= para eliminar también subgrupos
+        if not any(pos_set == otro['posiciones'] for otro in grupos_finales): #use <= to also remove subgroups
             grupos_finales.append(grupo)
     print_verbose(f"Grupos finales: {grupos_finales}") 
 
     return grupos_finales
 
 ##############################################################################
-# LÓGICA REFINADA DENTRO DE GRUPO
+# LOGIC 
 ##############################################################################
 
 def existe_subtrue_mas_pequeno(p_first, p_last, comp_global):
     """
-    Retorna True si dentro de comp_global existe un par (pA, pB)
-    tal que:
+    Return True if comp_global contains a pair (pA, pB):
       1) comp_global[(pA, pB)]["res"] == True
       2) pA >= p_first y pB <= p_last
       3) (pA, pB) != (p_first, p_last)
-      4) anotar == True (opcional, si quieres exigir que además esté anotar=True)
+      4) anotar == True (optional, if this should also require anotar=True)
     """
     for (pA, pB), info in comp_global.items():
         if info.get("res") is True and info.get("anotar", True) is True:
@@ -1063,35 +1049,35 @@ def existe_subtrue_mas_pequeno(p_first, p_last, comp_global):
 
 def desanotar_rangos_mas_grandes(p_first, p_last, comp_global):
     """
-    Marca con anotar=False todos los rangos (pA, pB) en 'comp_global' que:
-      - tengan res=True, anotar=True,
-      - sean distintos de (p_first, p_last),
-      - contengan a (p_first, p_last), es decir pA <= p_first y pB >= p_last.
+    Mark with anotar=False all ranges (pA, pB) en 'comp_global' que:
+      - have res=True, anotar=True,
+      - are different from (p_first, p_last),
+      - contain (p_first, p_last), es decir pA <= p_first y pB >= p_last.
 
-    Esto sirve para 'descartar' rangos más grandes cuando preferimos quedarnos
-    con el rango nuevo (más pequeño o más 'concreto').
+    This is used to 'discard' larger ranges when we prefer to keep
+    the new range (smaller or more 'specific').
     """
     for (pA, pB), info in comp_global.items():
-        # Debe ser True y estar marcado para anotar
+        # Must be True and marked for annotation
         if info.get("res") is True and info.get("anotar", True) is True:
-            # Debe ser un rango distinto de (p_first, p_last)
+            # Must be a different range de (p_first, p_last)
             if (pA, pB) != (p_first, p_last):
-                # Y contenerlo (inclusivo)
+                # And contain it (inclusive)
                 if pA <= p_first and pB >= p_last:
-                    print_verbose(f"   -> Marcando anotar=False para el rango grande {(pA, pB)}")
+                    print_verbose(f"{(pA, pB)}")
                     comp_global[(pA, pB)]["anotar"] = False
 
-def refine_compare(pos_list, dic_pol_pos, check_comparacion_custom, comparaciones_hechas_global): #VER SI NO SE PUEDE PONER COMO UNA FUNCIÓN INDIVIDUAL
+def refine_compare(pos_list, dic_pol_pos, check_comparacion_custom, comparaciones_hechas_global): #CHECK WHETHER THIS CAN BE MADE INTO AN INDEPENDENT FUNCTION
     
     resultados = []
 
     if len(pos_list) < 2:
-        print_verbose("SOLO HAY UNA POSICIÓN")
+        print_verbose("JUST ONE POSITION")
         return
 
     p_first = pos_list[0]
     p_last  = pos_list[-1]
-    print_verbose(f"Comparando: p_first = {p_first}, p_last = {p_last}")
+    print_verbose(f"Comparing: p_first = {p_first}, p_last = {p_last}")
     if p_first == p_last:
         return
 
@@ -1102,17 +1088,17 @@ def refine_compare(pos_list, dic_pol_pos, check_comparacion_custom, comparacione
         info = comparaciones_hechas_global[key]
         res = info["res"]
         detail = info["detail"]
-        print_verbose(f"Ya se comparó {key}: {res}, {detail} (intersected={info['intersected']})")
-        # Si ya fue marcado en grupos (intersected=True), no refinamos más
+        print_verbose(f"Compared: {key}: {res}, {detail} (intersected={info['intersected']})")
+        # If it was already marked in groups (intersected=True), do not refine further
         if info["intersected"]:
             return
         else:
-            # Si aparece por primera vez en grupos, actualizamos el flag a True
+            # If it appears for the first time in groups, update the flag to True
             comparaciones_hechas_global[key]["intersected"] = True
-            print_verbose(f"Actualizando flag a True para {key} (ya se había hecho en intersección)")
+            print_verbose(f" {key}")
     else:
         res, detail = check_comparacion_custom(p_first, dic_pol_pos[p_first], p_last, dic_pol_pos[p_last])
-        # Aquí, en el contexto de grupos refinados, el flag se establece en True
+        # Here, in the refined-group context, the flag is set to True
         comparaciones_hechas_global[key] = {"res": res, "detail": detail, "intersected": True, "anotar": True}
         print_verbose(f"Resultado de {key} (refinamiento de grupo): {res}, {detail}, intersected: True")
 
@@ -1135,35 +1121,35 @@ def refine_compare(pos_list, dic_pol_pos, check_comparacion_custom, comparacione
             desanotar_rangos_mas_grandes(p_first, p_last, comparaciones_hechas_global)
             return
 
-        # Subdividir según paridad
-        if n % 2 == 1: #impar
+        # Subdivide according to parity
+        if n % 2 == 1: #odd
             mid_index = n // 2
-            refine_compare(pos_list[:mid_index+1], dic_pol_pos, check_comparacion_custom, comparaciones_hechas_global) #El +1 está bien, es porque se accede como a un range entoncss no se considera el último elementeo
-            refine_compare(pos_list[mid_index:], dic_pol_pos, check_comparacion_custom, comparaciones_hechas_global) #Aquí el mid_index se refiere al primer elemento.
+            refine_compare(pos_list[:mid_index+1], dic_pol_pos, check_comparacion_custom, comparaciones_hechas_global) #The +1 is correct because this is accessed like a range, so the last element is not included
+            refine_compare(pos_list[mid_index:], dic_pol_pos, check_comparacion_custom, comparaciones_hechas_global) #Here, mid_index refers to the first element.
         else:
             half = n // 2
             refine_compare(pos_list[:half+1], dic_pol_pos, check_comparacion_custom, comparaciones_hechas_global)
             refine_compare(pos_list[half-1:], dic_pol_pos, check_comparacion_custom, comparaciones_hechas_global)
 
         # ---------------------------------------------
-        # LÓGICA NUEVA DE ANOTACIÓN (SIN before_count):
+        # NEW ANNOTATION LOGIC (SIN before_count):
         # ---------------------------------------------
-        # Guardamos este resultado (res=True) en comparaciones_hechas_global,
-        # pero no decidimos anotar hasta ver si ya existe un sub-True más pequeño:
+        # Store this result (res=True) in comparaciones_hechas_global,
+        # but do not decide whether to annotate until checking whether a smaller sub-True already exists:
         comparaciones_hechas_global[key] = {
             "res": True,
             "detail": detail,
             "intersected": True,
-            # anotar se definirá según exista subTrue
-            "anotar": True  # valor provisional
+            # anotar will be defined depending on whether subTrue exists
+            "anotar": True  # provisional value
         }
 
-        # Si ya existe un sub-True más pequeño, marcamos anotar=False
+        # If a smaller sub-True already exists, set anotar=False
         if existe_subtrue_mas_pequeno(p_first, p_last, comparaciones_hechas_global):
-            print_verbose(f"Ya existe un True más concreto dentro de {key}; se anota con anotar=False.")
+            print_verbose(f" {key}")
             comparaciones_hechas_global[key]["anotar"] = False
         else:
-            print_verbose(f"No existe sub-True más pequeño para {key}; se anota con anotar=True.")
+            print_verbose(f" {key}.")
 
         desanotar_rangos_mas_grandes(p_first, p_last, comparaciones_hechas_global)
         return
@@ -1175,8 +1161,8 @@ def refine_compare(pos_list, dic_pol_pos, check_comparacion_custom, comparacione
                 resultados.append(resultado_a_anotar)
             return
 
-        # Reducir p_last uno a uno (de derecha a izquierda)
-        for idx in range(len(pos_list) - 2, 0, -1): #Esto para cada iteración devuelve el idx que es cada vez una posición menos desde la última posición y saltándose la primera, por ejemplo si fuese 3 sería 3,2,1 (len sería 4).
+        # Reduce p_last one by one (from right to left)
+        for idx in range(len(pos_list) - 2, 0, -1): #For each iteration, this returns an idx that is one position less each time from the last position, skipping the first; for example, if it were 3 it would be 3,2,1 (len would be 4).
             list_candidate=pos_list[:idx+1]
             p_first = list_candidate[0]
             p_last  = list_candidate[-1]
@@ -1187,21 +1173,21 @@ def refine_compare(pos_list, dic_pol_pos, check_comparacion_custom, comparacione
         return
 
 ##############################################################################
-# compare_fn y comparar_grupos_interseccion
+# compare_fn and comparar_grupos_interseccion
 ##############################################################################
 
 def comparar_grupos_interseccion(grupos, check_comparacion_custom, dic_pol_pos, comparaciones_hechas_global):
-    print_verbose("\nENTRAMOS EN LA FUNCIÓN comparar_grupos_interseccion\n")
+    print_verbose("\nENTERING THE comparar_grupos_interseccion FUNCTION\n")
     
     resultados = {'True': [], 'False': [], 'None': []}
     etiquetados = {}
     print_verbose(f"grupos: {grupos}")
     
-    # Construir un diccionario que asocie cada posición a la(s) etiqueta(s) (los promedios de los grupos a los que pertenece)
+    # Build a dictionary associating each position with its label(s), i.e. the averages of the groups it belongs to
     for grupo in grupos:
         for p in grupo["posiciones"]:
             if p in etiquetados:
-                etiquetados[p] = f"{etiquetados[p]},{grupo['promedio']}" #Esto lo que hace es concatenar los valores promedios encontrados en esa posición, coge los promedios que ya había y le añade el nuevo separado con coma
+                etiquetados[p] = f"{etiquetados[p]},{grupo['promedio']}" #This concatenates the average values found at that position: it takes the averages already present and appends the new one separated by a comma
             else:
                 etiquetados[p] = str(grupo["promedio"])
     
@@ -1209,39 +1195,39 @@ def comparar_grupos_interseccion(grupos, check_comparacion_custom, dic_pol_pos, 
     posiciones_ordenadas = sorted(etiquetados.keys())
     print_verbose(f"posiciones_ordenadas: {posiciones_ordenadas}")
     
-    # Recorrer todas las parejas (pA, pB) con pA < pB para evitar repeticiones
+    # Iterate over all pairs (pA, pB) with pA < pB to avoid repetitions
     for i in range(len(posiciones_ordenadas)):
         for j in range(i + 1, len(posiciones_ordenadas)):
             pA = posiciones_ordenadas[i]
             pB = posiciones_ordenadas[j]
-            # Convertimos las etiquetas a listas de floats para compararlas
+            # Convert the labels to float lists for comparison
             gA = sorted(map(float, etiquetados[pA].split(',')))
             gB = sorted(map(float, etiquetados[pB].split(',')))
             
             print_verbose(f"Comparando: pA: {pA}, gA: {gA} | pB: {pB}, gB: {gB}")
             
-            # Solo comparamos si los grupos son diferentes
+            # 
             if gA == gB:
-                print_verbose(f"Los grupos para {pA} y {pB} son iguales; se omite la comparación.")
+                print_verbose(f"{pA} y {pB} are equal; .")
                 continue
             
-            # Usamos la tupla ordenada (mínimo, máximo) para evitar duplicados
+            # Use the sorted tuple (minimum, maximum) to avoid duplicates
             pair = (min(pA, pB), max(pA, pB))
             if pair not in comparaciones_hechas_global:
                 res, detail = check_comparacion_custom(pA, dic_pol_pos[pA], pB, dic_pol_pos[pB])
                 print_verbose(f"Key={pair} – Res={res}")
                 comparaciones_hechas_global[pair] = {"res": res, "detail": detail, "intersected": False, "anotar": True}
                 if existe_subtrue_mas_pequeno(pair[0], pair[1], comparaciones_hechas_global):
-                    print_verbose(f"Ya existe un True más concreto dentro de {pair}; se anota con anotar=False.")
+                    print_verbose(f"{pair}")
                     comparaciones_hechas_global[pair]["anotar"] = False
                 else:
-                    print_verbose(f"No existe sub-True más pequeño para {pair}; se anota con anotar=True.")
+                    print_verbose(f" {pair}")
 
                 desanotar_rangos_mas_grandes(pair[0], pair[1], comparaciones_hechas_global)
-                print_verbose(f"Comparaciones hechas global: {comparaciones_hechas_global}")
+                print_verbose(f": {comparaciones_hechas_global}")
                 polyA = dic_pol_pos[pA]
                 polyB = dic_pol_pos[pB]
-                print_verbose(f"Comparando la posición {pA} (reads: {polyA}) con {pB} (reads: {polyB})")
+                print_verbose(f"Comparing position {pA} (reads: {polyA}) with {pB} (reads: {polyB})")
                 res, detail = check_comparacion_custom(pA, polyA, pB, polyB)
                 if res is True:
                     resultados['True'].append((pA, pB, detail))
@@ -1250,26 +1236,26 @@ def comparar_grupos_interseccion(grupos, check_comparacion_custom, dic_pol_pos, 
                 else:
                     resultados['None'].append((pA, pB, detail))
             else:
-                print_verbose(f"El par {pair} ya se comparó; se omite.")
+                print_verbose(f" {pair}")
     
     return resultados
 
 ##############################################################################
-# 2. FUNCIÓN PRINCIPAL
+# 2. MAIN FUNCTION
 ##############################################################################
 
 def pipeline_agrupacion_por_distribuciones(dic_pol_pos, max_len=5, threshold=0.05, min_size=2):
     """
-    1) Construye distribuciones
-    2) Genera ventanas
-    3) Usa un set global 'comparaciones_hechas_global' para no repetir 
-       comparaciones en TODAS las ventanas
+    1) Build distributions
+    2) Generate windows
+    3) Use a global set 'comparaciones_hechas_global' to avoid repeating 
+       comparisons across ALL windows
     4) Para cada ventana:
-       - Filtra las pos => sub_dist
-       - Agrupa ignorando la base
-       - Compara ENTRE grupos (adyacentes)
-       - Compara DENTRO de cada grupo con la función refinada
-    5) Devuelve un dict con la info
+       - Filter positions => sub_dist
+       - Group while ignoring the base
+       - Compare BETWEEN groups (adjacent)
+       - Compare WITHIN each group using the refined function
+    5) Return a dict with the information
     """
 
     dist_por_pos = construir_distribuciones(dic_pol_pos)
@@ -1283,7 +1269,7 @@ def pipeline_agrupacion_por_distribuciones(dic_pol_pos, max_len=5, threshold=0.0
     results_all_windows = {}
     comparaciones_hechas_global = {} 
 
-    print_substep("Analizando posiciones ...")
+    print_substep("Analyzing positions ...")
     for i, window in enumerate(ventanas):
         sub_dist = {pos: dist_por_pos[pos] for pos in window}
         grupos_subdist = agrupar_por_distribucion_individual(sub_dist, threshold)
@@ -1297,7 +1283,7 @@ def pipeline_agrupacion_por_distribuciones(dic_pol_pos, max_len=5, threshold=0.0
         comp_en_grupos = {}
         for j, g in enumerate(grupos_subdist):
             print_verbose(f"G:{g}\n")
-            # Usamos la versión refinada
+            # Use the refined version
             pos_sorted = sorted(g["posiciones"])
             comp_en_grupos[j] = refine_compare(pos_sorted, dic_pol_pos, check_comparacion_custom, comparaciones_hechas_global)
 
@@ -1308,16 +1294,16 @@ def pipeline_agrupacion_por_distribuciones(dic_pol_pos, max_len=5, threshold=0.0
         print_verbose(f"results_all_windows[i]: {results_all_windows[i]}")
 
     return results_all_windows, comparaciones_hechas_global, dist_por_pos
-# FIN FUNCIONES ALGORITMO DE BÚSQUEDA
+# END SEARCH-ALGORITHM FUNCTIONS
 
 def run_trimming(fastq_1, fastq_2, layout, base_dir, work_dir, filter_unpaired=False):
     """
-    Realiza el trimming de lecturas. Si 'filter_unpaired=True' y 'layout' es PAIRED,
-    primero ejecuta repair.sh para descartar/ajustar pares huérfanos,
-    luego el trimming normal con cutadapt.
+    Perform read trimming. If 'filter_unpaired=True' and 'layout' is PAIRED,
+    first run repair.sh to discard/repair orphan pairs,
+    then run the standard trimming with cutadapt.
     """
 
-    print_step("Paso 4: Trimming de lecturas...")
+    print_step("Step 4: Read trimming...")
 
     trimmed_reads = work_dir / "reads_trimmed.fastq"
     read1_trimmed = work_dir / "reads_trimmed_1.fastq"
@@ -1326,9 +1312,9 @@ def run_trimming(fastq_1, fastq_2, layout, base_dir, work_dir, filter_unpaired=F
     read2_trimmed_temp = work_dir / "reads_trimmed_2_temp.fastq"
     trimmed_reads_temp = work_dir / "reads_trimmed.fastq.temp"
 
-    # Si ya existen los archivos resultantes, saltamos el proceso
+    # If the output files already exist, skip this step
     if (read1_trimmed.exists() and read2_trimmed.exists()) or trimmed_reads.exists():
-        print_substep("[INFO] Los archivos de trimming ya existen. Saltando trimming.")
+        print_substep("[INFO] Trimming files already exist. Skipping trimming.")
         return True
 
     try:
@@ -1337,39 +1323,43 @@ def run_trimming(fastq_1, fastq_2, layout, base_dir, work_dir, filter_unpaired=F
         # ======================================
         if layout == "PAIRED":
             # ------------------------------------------------------------------------
-            # (1) Si filter_unpaired=True -> ejecutar repair.sh ANTES de trimming
+            # (1) If filter_unpaired=True -> run repair.sh BEFORE trimming
             # ------------------------------------------------------------------------
             MAX_PIPELINE_ATTEMPTS=1
             if filter_unpaired:
                 MAX_PIPELINE_ATTEMPTS=3
-                # Rutas de salida del repair
+                # repair output paths
                 repaired_1 = work_dir / "reads_repaired_1.fastq"
                 repaired_2 = work_dir / "reads_repaired_2.fastq"
                 singletons = work_dir / "singletons.fastq"
 
-                repair_cmd = (f"/opt/cesga/2022/software/Compiler/gcccore/system/bbmap/39.19/repair.sh in={fastq_1} in2={fastq_2} out={repaired_1} out2={repaired_2} outs={singletons}")
-                print_substep(f"Ejecutando repair.sh (para descartar huérfanas antes de cutadapt): {repair_cmd}")
+                repair_cmd = (
+                    f"/opt/cesga/2022/software/Compiler/gcccore/system/bbmap/39.19/repair.sh "
+                    f"in={fastq_1} in2={fastq_2} "
+                    f"out={repaired_1} out2={repaired_2} outs={singletons}"
+                    )
+                print_substep(f"Running repair.sh: {repair_cmd}")
                 subprocess.run(repair_cmd, shell=True, check=True)
 
-                # A partir de aquí usaremos los repaired_1 y repaired_2
+                # From here onward, use repaired_1 and repaired_2
                 actual_fastq_1 = repaired_1
                 actual_fastq_2 = repaired_2
 
             else:
-                # Si no hay que filtrar/descartar lecturas huérfanas, usamos los fastq originales
+                # If orphan reads do not need to be filtered/discarded, use the original FASTQ files
                 actual_fastq_1 = fastq_1
                 actual_fastq_2 = fastq_2
 
             # ------------------------------------------------------------------------
-            # (2) Ejecutar cutadapt en Paired-end
+            # (2) Run cutadapt in paired-end mode
             # ------------------------------------------------------------------------
             cutadapt_cmd = (f"cutadapt -a file:{base_dir}/adapters.fa -A file:{base_dir}/adapters.fa -o {read1_trimmed_temp} -p {read2_trimmed_temp} {actual_fastq_1} {actual_fastq_2}")
 
             print_substep(f"Ejecutando cutadapt (Paired-end): {cutadapt_cmd}")
             if not retry_command(MAX_PIPELINE_ATTEMPTS, cutadapt_cmd):
-                raise RuntimeError("Error durante el trimming Paired-end.")
+                raise RuntimeError("Error during paired-end trimming.")
 
-            # Renombrar los .temp a definitivos
+            # Rename .temp files to final names
             mv_trim_cmd_1 = f"mv {read1_trimmed_temp} {read1_trimmed}"
             mv_trim_cmd_2 = f"mv {read2_trimmed_temp} {read2_trimmed}"
             subprocess.run(mv_trim_cmd_1, shell=True, check=True, executable='/bin/bash')
@@ -1380,16 +1370,16 @@ def run_trimming(fastq_1, fastq_2, layout, base_dir, work_dir, filter_unpaired=F
         # ======================================
         else:
             MAX_PIPELINE_ATTEMPTS=3
-            # SINGLE-END => no hay reparación previa
+            # SINGLE-END => there is no previous repair step
             cutadapt_cmd = (f"cutadapt -a file:{base_dir}/adapters.fa -o {trimmed_reads_temp} {fastq_1}")
             print_substep(f"Ejecutando cutadapt (Single-end): {cutadapt_cmd}")
             if not retry_command(MAX_PIPELINE_ATTEMPTS, cutadapt_cmd):
-                raise RuntimeError("Error durante el trimming Single-end.")
+                raise RuntimeError("Error during single-end trimming.")
 
             mv_trim_cmd = f"mv {trimmed_reads_temp} {trimmed_reads}"
             subprocess.run(mv_trim_cmd, shell=True, check=True, executable='/bin/bash')
 
-        print_substep("[INFO] Trimming completado correctamente.")
+        print_substep("[INFO] Trimming completed successfully.")
         return True
 
     except Exception as e:
@@ -1398,36 +1388,36 @@ def run_trimming(fastq_1, fastq_2, layout, base_dir, work_dir, filter_unpaired=F
 
 def count_true_superranges_in(pA, pB, comp_global):
     """
-    Devuelve cuántos rangos (xA, xB) con res=True (independientemente de anotar)
-    contienen o coinciden con (pA, pB). Es decir: xA <= pA y xB >= pB.
+    Return how many ranges (xA, xB) con res=True (regardless of anotar)
+    contain or match (pA, pB). Es decir: xA <= pA y xB >= pB.
     """
     count = 0
     for (xA, xB), info in comp_global.items():
-        if info.get("res") is True:  # solo importa que sea True
+        if info.get("res") is True:  # only True matters
             # si xA <= pA y xB >= pB => (xA, xB) contiene (pA, pB)
             if xA <= pA and xB >= pB:
                 count += 1
     return count
 
 def slow_comun(srr, base_dir, refseq, work_dir, platform, layout, fastq_1, fastq_2, fastq_single, modo, noindel=False):
-    # Paso 4: Trimming
-    # Intentamos trimming primero sin filtrar huérfanas:
+    # Step 4: Trimming
+    # First try trimming without filtering orphan reads:
     if layout == "PAIRED":
         trim_ok = run_trimming(fastq_1, fastq_2, layout, base_dir, work_dir, filter_unpaired=False)
     if layout == "SINGLE":
         trim_ok = run_trimming(fastq_single, fastq_2, layout, base_dir, work_dir, filter_unpaired=False)
 
-    # Si falla y es PAIRED, reintentar con filter_unpaired=True
+    # If it fails and layout is PAIRED, retry with filter_unpaired=True
     if not trim_ok and layout == "PAIRED":
-        print("[WARN] Trimming normal falló. Reintentando con filter_unpaired=True ...")
+        print("[WARN] Standard trimming failed. Retrying with filter_unpaired=True ...")
         trim_ok = run_trimming(fastq_1, fastq_2, layout, base_dir, work_dir, filter_unpaired=True)
 
     if not trim_ok:
-        print_error("Fallo completo en trimming, abortando pipeline.")
+        print_error("Complete trimming failure, aborting pipeline.")
         sys.exit(1)
 
-    # Paso 5: Mapeo de los reads trimeados
-    print_step("Paso 5: Mapeo de lecturas trimeadas y ordenado del bam...")
+    # Step 5: Mapping trimmed reads
+    print_step("Step 5: Mapping trimmed reads and sorting the BAM...")
     slow_bam_temp = work_dir / f"{srr}_slow_mapped_temp.bam"
     slow_bam = work_dir / f"{srr}_slow_mapped.bam"
     slow_sam = work_dir / f"{srr}_slow_mapped.sam"
@@ -1443,25 +1433,25 @@ def slow_comun(srr, base_dir, refseq, work_dir, platform, layout, fastq_1, fastq
         subprocess.run(mv_bam_cmd, shell=True, check=True, executable='/bin/bash')
 
     else:
-        print_substep("[INFO] El archivo BAM ya existe. Saltando mapeo...")
+        print_substep("[INFO] The BAM file already exists. Skipping mapping...")
     return pasos_comunes_slow_fast(srr, base_dir, refseq, work_dir, platform, layout, fastq_1, fastq_2, fastq_single, slow_bam, modo, noindel=False)
 
 def fast_comun(srr, base_dir, refseq, work_dir, platform, layout, fastq_1, fastq_2, fastq_single, modo, noindel=False):
     """
-    Pipeline "rápido":
-      1) Descargar SRA
-      2) Convertir a FASTQ
-      3) Mapeo [HACER A PARTIR DE AQUÍ]
-      5) Ordenar y eliminar duplicados
-      6) Selección de posiciones con polimorfismos [intentar hacer una función rápida]
-      7) Generar fastq con los reads de interés
+    "fast" pipeline:
+      1) Download SRA
+      2) Convert to FASTQ
+      3) Mapping [CONTINUE FROM HERE]
+      5) Sort and remove duplicates
+      6) Selection of polymorphic positions [try to implement a fast function]
+      7) Generate FASTQ with reads of interest
       8) Trimming
-      9) Mapeo
-      8) Análisis True/False
+      9) Mapping
+      8) True/False analysis
     """
 
-    # Paso 4: Mapeo de los reads sin trimear
-    print_step("Paso 4: Mapeo de lecturas NO trimeadas y ordenado del bam...")
+    # Step 4: Mapping untrimmed reads
+    print_step("Step 4: Mapping UNTRIMMED reads and sorting the BAM...")
     fast_bam_temp = work_dir / f"{srr}_fast_mapped_temp.bam"
     fast_bam = work_dir / f"{srr}_fast_mapped.bam"
     fast_sam = work_dir / f"{srr}_fast_mapped.sam"
@@ -1473,78 +1463,77 @@ def fast_comun(srr, base_dir, refseq, work_dir, platform, layout, fastq_1, fastq
         mv_bam_cmd = f"mv {fast_bam_temp} {fast_bam}"
         subprocess.run(mv_bam_cmd, shell=True, check=True, executable='/bin/bash')
     else:
-        print_substep("[INFO] El archivo BAM ya existe. Saltando mapeo...")
+        print_substep("[INFO] The BAM file already exists. Skipping mapping...")
 
-    # Paso 5: Eliminar duplicados
-    print_step("Paso 5: Eliminando duplicados y creando índice...")
+    # Step 5: Remove duplicates
+    print_step("Step 5: Removing duplicates and creating index...")
 
-    # Eliminar duplicados
     dedup_bam = work_dir / f"{srr}_fast_dedup.bam"
     dedup_bam_temp = work_dir / f"{srr}_fast_dedup_temp.bam"
     if not dedup_bam.exists():
         dedup_cmd = f"samtools markdup -r {fast_bam} {dedup_bam_temp}"
         if not retry_command(MAX_DOWNLOAD_ATTEMPTS, dedup_cmd):
-            print_error("Error al eliminar duplicados.")
+            print_error("Error removing duplicates.")
             return False
         mv_deputbam_cmd = f"mv {dedup_bam_temp} {dedup_bam}"
         subprocess.run(mv_deputbam_cmd, shell=True, check=True, executable='/bin/bash')
     else:
-        print_substep("[INFO] El archivo deduplicado ya existe. Saltando...")
+        print_substep("[INFO] The deduplicated file already exists. Skipping...")
 
-    #Creando un índice
+    #Creating an index
     dedup_bam_index = work_dir / f"{srr}_fast_dedup.bam.bai"
     if not dedup_bam_index.exists():
         try:
             pysam.index(str(dedup_bam))
         except Exception as e:
-            print_error("Error al crear el índice del BAM deduplicado:", e)
+            print_error("Error creating the deduplicated BAM index:", e)
             return False
     else:
-        print_substep("[INFO] El archivo indexado del bam deduplicado ya existe. Saltando...")
+        print_substep("[INFO] The indexed deduplicated BAM file already exists. Skipping...")
 
 
 
-    # Paso 6: Generar FASTQ con los reads de interés (con >1 polimorfismo)
-    print_step("Paso 6: Extrayendo FASTQ con reads de interés (con >1 polimorfismo)...")
+    # Step 6: Generate FASTQ with reads of interest (with >1 polymorphism)
+    print_step("Step 6: Extracting FASTQ with reads of interest (with >1 polymorphism)...")
     poly_fastq = work_dir / "reads_poly.fastq"
     poly_fastq_temp = work_dir / "reads_poly_temp.fastq"
 
     if not poly_fastq.exists():
-        # Para obtener el nombre de la referencia se abre el BAM deduplicado:
+        # Open the deduplicated BAM to obtain the reference name:
         with pysam.AlignmentFile(str(dedup_bam), "rb") as bam_temp:
             ref_names = bam_temp.references
 
         pileup_file_1 = work_dir / f"{srr}_busqueda_inicial.pileup"
-        print_step("Generando archivo Pileup inicial primera búsqueda...")
+        print_step("Generating initial pileup file for the first search...")
         if pileup_file_1.exists():    
-            print_substep("[INFO] El archivo pileup inicial existe. Continuando...")
+            print_substep("[INFO] The initial pileup file already exists. Continuing...")
         else:
-            pileup_cmd = (f"samtools mpileup -B -Q {min_base_qual} -f {refseq} {dedup_bam} > {pileup_file_1}") # NO GUARDAMOS LOS NOMBRES DE LOS READS POR LO QUE VIMOS EN ANTERIORES VERSIONES (NO HAY CORRESPONDENCIA EXACTA CON LAS BASES). Si quisiésemos guardarlo habría que añadir esta coletilla "--output-QNAME". Creo que la razón de esa no correspondencia puede ser que solo se filtra la calidad en ciertas columnas (se puede comprobar).
+            pileup_cmd = (f"samtools mpileup -B -Q {min_base_qual} -f {refseq} {dedup_bam} > {pileup_file_1}") # READ NAMES ARE NOT SAVED BECAUSE, IN PREVIOUS VERSIONS, THERE WAS NO EXACT CORRESPONDENCE WITH THE BASES. To save them, the "--output-QNAME" option would need to be added. The reason for this mismatch may be that quality filtering is only applied to certain columns (this can be checked).
             if not retry_command(MAX_DOWNLOAD_ATTEMPTS, pileup_cmd):
-                print("Error al generar el archivo Pileup inicial.")
+                print("Error generating the initial pileup file.")
                 return False
 
         posiciones = parse_pileup_and_extract_polimorfismos(pileup_file_1, 5)
-        print(f"La longitud de la selección con pileup inicial es: {len(posiciones)}")
+        print(f": {len(posiciones)}")
         
         ref_fa = pysam.FastaFile(str(refseq))
         dic_pol_pos_1,max_len_reads, reads_in_fin = scan_region_for_polymorphisms(str(dedup_bam), ref_names[0], posiciones, 5, ref_fa, min_base_qual, noindel)
         ref_fa.close()
 
-        # Contar cuántas posiciones polimórficas aporta cada read
+        # Count how many polymorphic positions each read contributes
         read_poly_counts = {}
         for pos, allele_dict in dic_pol_pos_1.items():
             for allele, read_set in allele_dict.items():
                 for rname in read_set:
                     read_poly_counts[rname] = read_poly_counts.get(rname, 0) + 1
 
-        # Seleccionar los reads que aparecen en más de una posición (es decir, >1 polimorfismo)
+        # Select reads that appear in more than one position (i.e. >1 polymorphism)
         selected_reads = {rname for rname, count in read_poly_counts.items() if count > 1}
 
         if not selected_reads:
-            print("[INFO] No se encontraron reads con >1 polimorfismo en la región.")
+            print("[INFO] No reads with >1 polymorphism were found in the region.")
         else:
-            # Guardar la lista de reads en un archivo temporal (uno por línea)
+            # Save the read list to a temporary file (one per line)
             with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp:
                 tmp_list = tmp.name
                 for rname in selected_reads:
@@ -1558,34 +1547,34 @@ def fast_comun(srr, base_dir, refseq, work_dir, platform, layout, fastq_1, fastq
             print_substep(f"Ejecutando: {cmd}")
             try:
                 subprocess.run(cmd, shell=True, check=True, executable='/bin/bash')
-                print(f"[INFO] Archivo FASTQ con reads de interés generado: {poly_fastq}")
+                print(f"[INFO]  FASTQ file generated: {poly_fastq}")
             except subprocess.CalledProcessError as e:
-                print_verbose(f"[ERROR] No se pudo generar el archivo FASTQ de reads de interés: {e}")
+                print_verbose(f"[ERROR] FASTQ file could not be generated: {e}")
                 return False
             finally:
                 os.remove(tmp_list)
             mv_poly_fastq_cmd = f"mv {poly_fastq_temp} {poly_fastq}"
             subprocess.run(mv_poly_fastq_cmd, shell=True, check=True, executable='/bin/bash')
     else:
-        print_substep("[INFO] El archivo fastq de reads seleccionados ya existe. Saltando...")
+        print_substep("[INFO] The FASTQ file with selected reads already exists. Skipping...")
 
 
-    # Paso 7: Trimming
-    print_step("Paso 7: Trimming de lecturas...")
+    # Step 7: Trimming
+    print_step("Step 7: Read trimming...")
     trimmed_reads = work_dir / "reads_trimmed.fastq"
     if trimmed_reads.exists():
-        print_substep("[INFO] El archivo 'reads_trimmed.fastq' ya existe. Saltando trimming.")
+        print_substep("[INFO] The 'reads_trimmed.fastq' file already exists. Skipping trimming.")
     else:
         trimmed_reads_temp = work_dir / "reads_trimmed_temp.fastq"
         cutadapt_cmd = f"cutadapt -a file:{base_dir}/adapters.fa -o {trimmed_reads_temp} {poly_fastq}"
         if not retry_command(MAX_DOWNLOAD_ATTEMPTS, cutadapt_cmd):
-            print_error("Error durante el trimming de los reads (single).")
+            print_error("Error during read trimming (single-end).")
             return False
         mv_trim_cmd = f"mv {trimmed_reads_temp} {trimmed_reads}"
         subprocess.run(mv_trim_cmd, shell=True, check=True, executable='/bin/bash')    
 
-    # Paso 8: Mapeo de los reads trimeados seleccionados
-    print_step("Paso 8: Mapeo de lecturas seleccionadas trimeadas y ordenado del bam...")
+    # Step 8: Mapping selected trimmed reads
+    print_step("Step 8: Mapping selected trimmed reads and sorting the BAM...")
     fast_bam_selected = work_dir / f"{srr}_fast_mapped_selected.bam"
     fast_bam_selected_temp = work_dir / f"{srr}_fast_mapped_selected_temp.bam"
     fast_sam_selected = work_dir / f"{srr}_fast_mapped_selected.sam"
@@ -1594,17 +1583,17 @@ def fast_comun(srr, base_dir, refseq, work_dir, platform, layout, fastq_1, fastq
         mv_fast_bam_selected_cmd = f"mv {fast_bam_selected_temp} {fast_bam_selected}"
         subprocess.run(mv_fast_bam_selected_cmd, shell=True, check=True, executable='/bin/bash')
     else:
-        print_substep("[INFO] El archivo BAM ya existe. Saltando mapeo...")
+        print_substep("[INFO] The BAM file already exists. Skipping mapping...")
 
     return pasos_comunes_slow_fast(srr, base_dir, refseq, work_dir, platform, layout, fastq_1, fastq_2, fastq_single, fast_bam_selected, modo, noindel=False)
 
 
 def pasos_comunes_slow_fast(srr, base_dir, refseq, work_dir, platform, layout, fastq_1, fastq_2, fastq_single, bam, modo, noindel=False):
 
-    print_step("\nEntrando en pasos finales ... (comunes en slow y fast)\n")
+    print_step("\nEntering final steps ... (common to slow and fast)\n")
 
-    # Paso 6: Eliminar duplicados
-    print_step("Paso final 1: Eliminando duplicados y creando índice...")
+    # Step 6: Remove duplicates
+    print_step("Final step 1: Removing duplicates and creating index...")
 
     # Eliminar duplicados
     dedup_bam = work_dir / f"{srr}_slow_dedup.bam"
@@ -1613,49 +1602,47 @@ def pasos_comunes_slow_fast(srr, base_dir, refseq, work_dir, platform, layout, f
     if not dedup_bam.exists():
         dedup_cmd = f"samtools markdup -r {bam} {dedup_bam_temp}"
         if not retry_command(MAX_DOWNLOAD_ATTEMPTS, dedup_cmd):
-            print("Error al eliminar duplicados.")
+            print("Error removing duplicates.")
             return False
         mv_deputbam_cmd = f"mv {dedup_bam_temp} {dedup_bam}"
         subprocess.run(mv_deputbam_cmd, shell=True, check=True, executable='/bin/bash')
     else:
-        print_substep("[INFO] El archivo deduplicado ya existe. Saltando...")
+        print_substep("[INFO] The deduplicated file already exists. Skipping...")
 
-    #Creando un índice
+    #Creating an index
     dedup_bam_index = work_dir / f"{srr}_slow_dedup.bam.bai"
     if not dedup_bam_index.exists():
         try:
             pysam.index(str(dedup_bam))
         except Exception as e:
-            print("Error al crear el índice del BAM deduplicado:", e)
+            print("Error creating the deduplicated BAM index:", e)
             return False
     else:
-        print_substep("[INFO] El archivo indexado del bam deduplicado ya existe. Saltando...")
+        print_substep("[INFO] The indexed deduplicated BAM file already exists. Skipping...")
 
-    # Paso 7: Leyendo posiciones
+    # Step 7: Reading positions
 
     ############################################################################
-    # PRUEBAS, CREACIÓN DE PILEUP POR ARCHIVO (RECUPERADO DE VERSIÓN ANTERIOR) #
+    # TESTS, PILEUP FILE CREATION (RECOVERED FROM A PREVIOUS VERSION) #
     ############################################################################
 
     pileup_file = work_dir / f"{srr}_slow.pileup"
-    print_step("Paso final 2: Generando archivo Pileup inicial...")
+    print_step("Final step 2: Generating initial pileup file...")
     if pileup_file.exists():    
-        print_substep("[INFO] El archivo pileup existe. Continuando...")
+        print_substep("[INFO] The pileup file already exists. Continuing...")
     else:
-        pileup_cmd = (f"samtools mpileup -B -Q {min_base_qual} -f {refseq} {dedup_bam} > {pileup_file}") # NO GUARDAMOS LOS NOMBRES DE LOS READS POR LO QUE VIMOS EN ANTERIORES VERSIONES (NO HAY CORRESPONDENCIA EXACTA CON LAS BASES). Si quisiésemos guardarlo habría que añadir esta coletilla "--output-QNAME". Creo que la razón de esa no correspondencia puede ser que solo se filtra la calidad en ciertas columnas (se puede comprobar).
+        pileup_cmd = (f"samtools mpileup -B -Q {min_base_qual} -f {refseq} {dedup_bam} > {pileup_file}") # READ NAMES ARE NOT SAVED BECAUSE, IN PREVIOUS VERSIONS, THERE WAS NO EXACT CORRESPONDENCE WITH THE BASES. To save them, the "--output-QNAME" option would need to be added. The reason for this mismatch may be that quality filtering is only applied to certain columns (this can be checked).
         if not retry_command(MAX_DOWNLOAD_ATTEMPTS, pileup_cmd):
-            print("Error al generar el archivo Pileup inicial.")
+            print("Error generating the initial pileup file.")
             return False
 
-    # Definir las combinaciones de parámetros que se evaluarán:
+    # Define the parameter combinations to be evaluated:
     from itertools import product
     all_param_combinations = list(product(MIN_READS_LIST, READS_GAMETOS_MINORITARIOS_LIST, THRESHOLD_GAMETO_FREQ_LIST))
 
-    vcf_generado = False
-
     for (mr, rgm, freq_val) in tqdm(all_param_combinations):
         # ================================
-        # Repetir PASOS 7 y 8 con estos parámetros
+        # Repeat STEPS 7 and 8 with these parameters
         # ================================
 
         print_substep(
@@ -1663,7 +1650,7 @@ def pasos_comunes_slow_fast(srr, base_dir, refseq, work_dir, platform, layout, f
             f"reads_gametos_minoritarios={rgm}, THRESHOLD_GAMETO_FREQ={freq_val}"
         )
 
-        global MIN_READS #se cambian esos parámetros a nivel global
+        global MIN_READS #these parameters are changed globally
         global reads_gametos_minoritarios
         global THRESHOLD_GAMETO_FREQ
 
@@ -1674,7 +1661,7 @@ def pasos_comunes_slow_fast(srr, base_dir, refseq, work_dir, platform, layout, f
         posiciones_pileup = parse_pileup_and_extract_polimorfismos(pileup_file, MIN_READS)
         print_substep(f"La longitud de la selección con pileup es: {len(posiciones_pileup)}")
 
-        # Si no hay posiciones, escribimos la línea con campos vacíos y pasamos a la siguiente iteración
+        # If there are no positions, write the line with empty fields and move to the next iteration
         if len(posiciones_pileup) < 2:
             result_filename = base_dir / f"results_{modo}.txt"
             with open(result_filename, "a") as rf:
@@ -1683,113 +1670,85 @@ def pasos_comunes_slow_fast(srr, base_dir, refseq, work_dir, platform, layout, f
                     f"Min_gameto_num:{rgm}\t"
                     f"Min_gameto_freq:{freq_val}\t"
                     f"Sra:{srr}\tPlatform:{platform}\t"
-                    f"Rec:\tNo_Rec:\tBegFin_Reads:\n"  # Campos vacíos
+                    f"Rec:\tNo_Rec:\tBegFin_Reads:\n"  # Empty fields
                 )
-            continue  # Se omite todo lo demás de esta iteración
+            continue  # Skip the rest of this iteration
 
         print_verbose(posiciones_pileup)
 
         ############################################################################
-        # PRUEBAS, CREACIÓN DE PILEUP POR ARCHIVO (RECUPERADO DE VERSIÓN ANTERIOR) #
+        # TESTS, PILEUP FILE CREATION (RECOVERED FROM A PREVIOUS VERSION) #
         ############################################################################
 
-        print_step("Paso final 3: Leyendo posiciones mapeadas...")   
-        bam = pysam.AlignmentFile(dedup_bam, "rb") # Abrir el archivo BAM para extraer el nombre de la referencia
-        ref_names = bam.references  # Obtiene una tupla de nombres de referencia
+        print_step("Final step 3: Reading mapped positions...")   
+        bam = pysam.AlignmentFile(dedup_bam, "rb") # Open the BAM file to extract the reference name
+        ref_names = bam.references  # Gets a tuple of reference names
         bam.close()
         ref_fa = pysam.FastaFile(str(refseq))
         dic_pol_pos,max_len_reads, reads_in_fin=scan_region_for_polymorphisms(dedup_bam, ref_names[0], posiciones_pileup, MIN_READS, ref_fa, min_base_qual, noindel)
         print_substep(f"EL TAMAÑO MÁXIMO DE READ ES: {max_len_reads}")
-        # Crear una instancia de PrettyPrinter con un ancho de línea mayor si es necesario
+        # Create a PrettyPrinter instance with a larger line width if needed
         print_verbose(dic_pol_pos)
         ref_fa.close()
 
-        # Paso 8: Análisis (True/False)
-        print_step("Paso final 4: Análisis de posiciones consecutivas ...")
+        # Step 8: Analysis (True/False)
+        print_step("Final step 4: Consecutive-position analysis ...")
         results_file = base_dir / "results.txt"
-        results,comparaciones_hechas_global,dist_por_pos = pipeline_agrupacion_por_distribuciones(dic_pol_pos,max_len=max_len_reads,threshold=0.1,min_size=2) # este treshold es para la agrupación por grupos distintos, no para el filtrado de gametos, ES DISTINTO
+        results,comparaciones_hechas_global,dist_por_pos = pipeline_agrupacion_por_distribuciones(dic_pol_pos,max_len=max_len_reads,threshold=0.1,min_size=2) # this threshold is for grouping distinct groups, not for gamete filtering; IT IS DIFFERENT
         #resultado=comparar_posiciones_consecutivas(dic_pol_pos)
         print_verbose(f"\n\n[DEBUG] comparaciones_hechas_global:\n {comparaciones_hechas_global}")
         coinfection_detected = False
-        if not vcf_generado:
-            for pos, freq_dict in dist_por_pos.items():
-                # freq_dict es p.ej. {'A':0.3, 'T':0.7}
-                count_over_01 = sum(1 for f in freq_dict.values() if f > 0.1)
-                if count_over_01 >= 2:
-                    coinfection_detected = True
-                    break
-        # Filtramos las parejas True / False, pero solo si "anotar" == True
+        # Filter the True / False pairs, but only if "anotar" == True
         true_list = []
         false_list = []
 
         for (pA, pB), info in comparaciones_hechas_global.items():
-            if info["anotar"]:  # Solo guardamos si anotar == True
+            if info["anotar"]:  # Only save if anotar == True
                 if info["res"] is True:
-                    # (1) Contar cuántos rangos True (anotar sea True O False) 
-                    #     contienen (pA, pB)
                     bigger_count = count_true_superranges_in(pA, pB, comparaciones_hechas_global)
                     
-                    # (2) Guardar en la tupla
-                    #     Si antes guardabas (pA, pB, detail),
-                    #     ahora añadimos bigger_count como campo extra:
+                    # (2) Save in the tuple
+                    #     If previously saving (pA, pB, detail),
+                    #     now add bigger_count as an extra field:
                     true_list.append((pA, pB, info["detail"], bigger_count))
 
                 elif info["res"] is False:
                     false_list.append((pA, pB, info["detail"]))
 
-        # Formateamos las parejas True y False
+        # Format the True and False pairs
         true_pairs = ";".join([f"{pA},{pB},{bigger_count},{detail}" for (pA, pB, detail, bigger_count) in true_list])
         false_pairs = ";".join([f"{a},{b},{detail}" for (a, b, detail) in false_list])
 
-        # (1) Formatear reads_in_fin en forma "110,300;301,450;..."
+        # (1) Format reads_in_fin as "110,300;301,450;..."
         reads_in_fin_str = ";".join(f"{st},{en}" for (st, en) in reads_in_fin)
 
-        # Nombramos el archivo de resultados (versión según tu ejemplo)
+        # Name the results file (version according to your example)
         result_filename = base_dir / f"results_{modo}.txt"
 
-        # Abrimos o creamos el archivo en modo append y escribimos
+        # Open or create the file in append mode and write to it
         with open(result_filename, "a") as rf:
             rf.write(f"Min_read_num:{mr}\tMin_gameto_num:{rgm}\tMin_gameto_freq:{freq_val}\tSra:{srr}\tPlatform:{platform}\tRec:{true_pairs}\tNo_Rec:{false_pairs}\tBegFin_Reads:{reads_in_fin_str}\n")
-
-    if coinfection_detected and not vcf_generado:
-        # 1) Creamos la carpeta si no existe
-        coinfection_dir = base_dir / "vcf_coinfecciones"
-        coinfection_dir.mkdir(parents=True, exist_ok=True)
-
-        # 2) Nombre del VCF
-        vcf_path = coinfection_dir / f"{srr}.vcf"
-        refseq_bcf = base_dir / "refseq" / "NC_045512.2.fna"
-
-        # 3) Comando para generar el VCF
-        #    Ejemplo con bcftools (requiere que lo tengas instalado):
-        #    samtools mpileup -B -f ref.fasta dedup.bam | bcftools call -mv -Ov -o out.vcf
-        cmd_vcf = (f"bcftools mpileup -d 100000 -f {refseq_bcf} {dedup_bam} | bcftools call -mv -Ov  --ploidy 1 -o {vcf_path}")
-        print_substep(f"Ejecutando: {cmd_vcf}")
-        subprocess.run(cmd_vcf, shell=True, check=True)
-
-        print_substep(f"Se ha generado el VCF para potencial coinfección: {vcf_path}")
-        vcf_generado = True
         
-    print_step("Pipeline completado exitosamente.")
+    print_step("Pipeline completed successfully.")
     return True
 
 def inicio_comun(srr, base_dir, refseq, modo, noindel=False):
     """
-    Pipeline "lento":
-      1) Descargar SRA
-      2) Convertir a FASTQ
+    "slow" pipeline:
+      1) Download SRA
+      2) Convert to FASTQ
     """
     if modo == "slow":
-        print("[INFO] Iniciando pipeline SLOW...")
+        print("[INFO] Starting SLOW pipeline...")
     if modo == "fast":
-        print("[INFO] Iniciando pipeline FAST...")
+        print("[INFO] Starting FAST pipeline...")
 
     work_dir = base_dir / srr
     if not work_dir.exists():
         work_dir.mkdir(parents=True)
     os.chdir(work_dir)
 
-    print_step("Paso 1: Identificando plataforma...")
+    print_step("Step 1: Identifying platform...")
     attempt1 = 1
     result_platform_and_layout = None
 
@@ -1797,32 +1756,32 @@ def inicio_comun(srr, base_dir, refseq, modo, noindel=False):
         try:
             result_platform_and_layout = identify_platform_and_layout(srr)
             if result_platform_and_layout:
-                break  # Se obtuvo la información correctamente
+                break  # The information was obtained successfully
         except Exception as e:
-            print_substep(f"Intento {attempt} fallido al obtener información para {srr}: {e}")
+            print_substep(f"Attemp {attempt} failed {srr}: {e}")
         attempt1 += 1
         time.sleep(random.randint(1, 20))
 
     if not result_platform_and_layout:
-        print("Error al obtener información del archivo SRA tras varios intentos.")
+        print("Error obtaining information from the SRA file after several attempts.")
         sys.exit(1)
         return False
 
     platform = result_platform_and_layout["platform"]
     layout = result_platform_and_layout["layout"]
 
-    # Paso 2: Descargar SRA (si no existe)
-    print_step("Paso 2: Descargando datos...")
+    # Step 2: Download SRA (if it does not exist)
+    print_step("Step 2: Downloading data...")
     sra_file = work_dir / f"{srr}.sra"
     if not sra_file.exists():
         if not retry_command(MAX_DOWNLOAD_ATTEMPTS, f"prefetch --output-directory {base_dir} {srr}"):
-            print("Error al descargar el archivo SRA.")
+            print("Error downloading the SRA file.")
             return False
     else:
-        print_substep("[INFO] El archivo SRA ya existe. Saltando descarga.")
+        print_substep("[INFO] The SRA file already exists. Skipping download.")
 
-    # Paso 3: Convertir SRA a FASTQ
-    print_step("Paso 3: Convirtiendo SRA a FASTQ...")
+    # Step 3: Convert SRA to FASTQ
+    print_step("Step 3: Converting SRA to FASTQ...")
     fastq_1 = work_dir / f"{srr}_1_done.fastq"
     fastq_1_temp = work_dir / f"{srr}_1.fastq"
     fastq_2 = work_dir / f"{srr}_2_done.fastq"
@@ -1834,15 +1793,15 @@ def inicio_comun(srr, base_dir, refseq, modo, noindel=False):
     mv_fastq_cmd_2 = f"mv {fastq_2_temp} {fastq_2}"
     mv_fastq_cmd = f"mv {fastq_single_temp} {fastq_single}"
 
-    # Lógica para ILLUMINA / ONT / PACBIO (similar a run_pipeline_fast)
+    # Logic for ILLUMINA / ONT / PACBIO (similar to run_pipeline_fast)
     if platform in ["ILLUMINA","OXFORD NANOPORE", "ONT", "OXFORD_NANOPORE"]:
         if layout == "PAIRED":
             if fastq_1.exists() and fastq_2.exists():
-                print_substep("[INFO] Archivos FASTQ ya existe. Saltando conversión.")
+                print_substep("[INFO] FASTQ files already exist. Skipping conversion.")
             else:
                 cmd_fastq = f"fasterq-dump {sra_file} --split-files -O {work_dir}"
                 if not retry_command(MAX_DOWNLOAD_ATTEMPTS, cmd_fastq):
-                    print("Error al convertir SRA a FASTQ.")
+                    print("Error converting SRA to FASTQ.")
                     return False
                 subprocess.run(mv_fastq_cmd_1, shell=True, check=True, executable='/bin/bash')
                 subprocess.run(mv_fastq_cmd_2, shell=True, check=True, executable='/bin/bash')
@@ -1850,33 +1809,33 @@ def inicio_comun(srr, base_dir, refseq, modo, noindel=False):
 
         else:  # SINGLE
             if fastq_single.exists():
-                print_substep("[INFO] Archivo FASTQ single ya existe. Saltando conversión.")
+                print_substep("[INFO] Single-end FASTQ file already exists. Skipping conversion.")
             else:
                 cmd_fastq = f"fasterq-dump {sra_file} -O {work_dir}"
                 if not retry_command(MAX_DOWNLOAD_ATTEMPTS, cmd_fastq):
-                    print("Error al convertir SRA a FASTQ.")
+                    print("Error converting SRA to FASTQ.")
                     return False
                 subprocess.run(mv_fastq_cmd, shell=True, check=True, executable='/bin/bash')
 
     elif platform in ["PACBIO","PACBIO_SMRT"]:
         if layout == "PAIRED":
             if fastq_1.exists() and fastq_2.exists():
-                print_substep("[INFO] Archivos FASTQ _1 y _2 ya existen. Saltando conversión.")
+                print_substep("[INFO] FASTQ _1 and _2 files already exist. Skipping conversion.")
             else:
                 cmd_fastq = f"fastq-dump {sra_file} --split-files -O {work_dir}"
                 if not retry_command(MAX_DOWNLOAD_ATTEMPTS, cmd_fastq):
-                    print("Error al convertir SRA a FASTQ.")
+                    print("Error converting SRA to FASTQ.")
                     return False
                 subprocess.run(mv_fastq_cmd_1, shell=True, check=True, executable='/bin/bash')
                 subprocess.run(mv_fastq_cmd_2, shell=True, check=True, executable='/bin/bash')
 
         else:  # SINGLE
             if fastq_single.exists():
-                print_substep("[INFO] Archivo FASTQ single ya existe. Saltando conversión.")
+                print_substep("[INFO] Single-end FASTQ file already exists. Skipping conversion.")
             else:
                 cmd_fastq = f"fastq-dump {sra_file} -O {work_dir}"
                 if not retry_command(MAX_DOWNLOAD_ATTEMPTS, cmd_fastq):
-                    print("Error al convertir SRA a FASTQ.")
+                    print("Error converting SRA to FASTQ.")
                     return False
                 subprocess.run(mv_fastq_cmd, shell=True, check=True, executable='/bin/bash')
 
@@ -1887,36 +1846,36 @@ def inicio_comun(srr, base_dir, refseq, modo, noindel=False):
 
 def inicio_comun_simulacion(fastq_1, fastq_2, simulacion_folder, base_dir, refseq, modo, noindel=False):
     """
-    Versión simulada del pipeline slow:
-      - Recibe dos archivos FASTQ ya existentes.
-      - Omite la descarga y conversión de SRA.
-      - Asume plataforma ILLUMINA y layout PAIRED.
-      - Los nombres de los archivos de salida incluirán también el nombre del directorio de simulación.
+    Simulated version of the slow pipeline:
+      - Receives two existing FASTQ files.
+      - Skips SRA download and conversion.
+      - Assumes ILLUMINA platform and PAIRED layout.
+      - Output filenames will also include the simulation directory name.
     """
-    # Define un nombre de directorio para la simulación
-    sim_dir = simulacion_folder  # Este nombre puede modificarse según lo que necesites
+    # Define a directory name for the simulation
+    sim_dir = simulacion_folder  # This name can be modified as needed
     work_dir = base_dir / simulacion_folder
     os.chdir(work_dir)
 
-    print(f"\nHAS ENTRADO EN EL MODO SIMULACIÓN O ESTÁS INDICANDO FASTQ ESPECÍFICOS\n")
+    print(f"\nSIMULATION MODE\n")
     if modo == "slow":
-        print("[INFO] Iniciando pipeline SLOW (simulación/fastq)...")
+        print("[INFO] Starting SLOW pipeline (simulation/FASTQ)...")
     if modo == "fast":
-        print("[INFO] Iniciando pipeline FAST (simulación/fastq)...")
+        print("[INFO] Starting FAST pipeline (simulation/FASTQ)...")
 
     
-    # Obtener el nombre del directorio de simulación para usarlo en los nombres de archivo
+    # Obtain the simulation directory name to use in filenames
     sim_dir_name = work_dir.name
 
-    # Forzar plataforma y layout
+    # Force platform and layout
     platform = "ILLUMINA"
     if fastq_2:
         layout = "PAIRED"
     else:
         layout = "SINGLE"
-    print(f"[INFO] Plataforma identificada: {platform}")
-    print(f"[INFO] Tipo de lectura: {layout}")
-    print(f"\nFastq indicado -> saltando a paso 4 ...\n")
+    print(f"[INFO] Platform: {platform}")
+    print(f"[INFO] Read: {layout}")
+    print(f"\nFastq -> going to step 4 ...\n")
     srr=str(simulacion_folder).split("/")[-1]
     slow_bam = work_dir / f"{srr}_slow_mapped.bam"
     
@@ -1927,58 +1886,58 @@ def inicio_comun_simulacion(fastq_1, fastq_2, simulacion_folder, base_dir, refse
 
 
 ##########################################################
-# 3) PARSE DE ARGUMENTOS
+# 3) ARGUMENT PARSING
 ##########################################################
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Pipeline que procesa SRRs o FASTQ en modo simulación, con parámetros configurables."
+        description="Pipeline that processes SRRs or FASTQ files in simulation mode, with configurable parameters."
     )
-    # Parámetros (listas) que se pueden pasar como CSV
+    # Parameters (listas) que se pueden pasar como CSV
     parser.add_argument(
         "--MIN_READS_LIST",
         default="10",
-        help="Lista separada por comas con el número mínimo de lecturas. Ej: 5,10,20"
+        help="Comma-separated list with the minimum number of reads. Example: 5,10,20"
     )
     parser.add_argument(
         "--READS_GAMETOS_MINORITARIOS_LIST",
         default="10",
-        help="Lista separada por comas con el número mínimo de lecturas en gametos minoritarios. Ej: 1,10,15"
+        help="Comma-separated list with the minimum number of reads in minor gametes. Example: 1,10,15"
     )
     parser.add_argument(
         "--THRESHOLD_GAMETO_FREQ_LIST",
         default="0.05",
-        help="Lista separada por comas con umbrales de frecuencia de gametos. Ej: 0.05,0.1,0.20"
+        help="Comma-separated list with gamete-frequency thresholds. Example: 0.05,0.1,0.20"
     )
 
-    # Flags de modo
+    # Mode flags
     parser.add_argument(
         "--slow",
         action="store_true",
-        help="Usar pipeline lento en lugar del rápido."
+        help="Use the slow pipeline instead of the fast one."
     )
     parser.add_argument(
         "--verbose",
         action="store_true",
-        help="Activa el modo detallado (verbose)."
+        help="Enable detailed mode (verbose)."
     )
     parser.add_argument(
         "--noindel",
         action="store_true",
-        help="Ignora inserciones y deleciones a la hora de escanear polimorfismos."
+        help="Ignore insertions and deletions when scanning polymorphisms."
     )
 
-    # Flag para modo simulación
+    # Flag for simulation mode
     parser.add_argument(
         "--simulacion",
         action="store_true",
-        help="Activa el modo simulación con 3 posicionales: <fastq1> [fastq2] <carpeta>."
+        help="Enable simulation mode with 3 positional arguments: <fastq1> [fastq2] <folder>."
     )
 
-    # Argumentos posicionales (uso flexible)
+    # Positional arguments (uso flexible)
     parser.add_argument(
         "positional_args",
         nargs="*",
-        help="Argumentos posicionales. En modo normal: <SRR>. En modo simulación: <fastq1> [fastq2] <carpeta>."
+        help="Positional arguments. In normal mode: <SRR>. In simulation mode: <fastq1> [fastq2] <folder>."
     )
 
     return parser.parse_args()
@@ -1994,27 +1953,27 @@ def main():
     global THRESHOLD_GAMETO_FREQ_LIST
     global MAX_PIPELINE_ATTEMPTS
 
-    # 1) Parse de argumentos
+    # 1) Parse arguments
     args = parse_args()
 
-    # 2) Ajustar listas globales (si el usuario pasa algo distinto)
+    # 2) Set global lists (if the user provides different values)
     MIN_READS_LIST = [int(x) for x in args.MIN_READS_LIST.split(",")]
     READS_GAMETOS_MINORITARIOS_LIST = [int(x) for x in args.READS_GAMETOS_MINORITARIOS_LIST.split(",")]
     THRESHOLD_GAMETO_FREQ_LIST = [float(x) for x in args.THRESHOLD_GAMETO_FREQ_LIST.split(",")]
 
-    # 3) Ajustar verbose y noindel
+    # 3) Set verbose and noindel
     VERBOSE = args.verbose
     noindel_option = args.noindel
 
-    # 4) Rutas base
+    # 4) Base paths
     base_dir = Path(__file__).resolve().parent
     refseq = base_dir / "refseq" / "NC_045512.2.fna"
 
-    # 5) Lógica de simulación vs. no simulación
+    # 5) Simulation vs. non-simulation logic
     if args.simulacion:
-        # Se esperan 3 posicionales: fastq1, fastq2, carpeta
+        # Expecting 3 positional arguments: fastq1, fastq2, folder
         if len(args.positional_args) < 2:
-            print_error("En modo --simulacion se requieren 2-3 argumentos posicionales: <fastq1> [fastq2] <carpetaSimulacion>")
+            print_error("In --simulacion mode, 2-3 positional arguments are required: <fastq1> [fastq2] <folderSimulacion>")
             sys.exit(1)
 
         fastq1 = args.positional_args[0]
@@ -2023,33 +1982,33 @@ def main():
             simulacion_folder = args.positional_args[2]
 
         if len(args.positional_args) == 2:
-            print(f"\nSolo se ha reconocido un fastq {fastq1}, se entiende modo single")
+            print(f"\n Just one fastq {fastq1}, mode single")
             fastq2 = False
             simulacion_folder = args.positional_args[1]
 
         if args.slow:
-            # MODO SIMULACIÓN SLOW
+            # SLOW SIMULATION MODE
             modo = "slow"
             ok = inicio_comun_simulacion(fastq1, fastq2, simulacion_folder, base_dir, refseq, modo, noindel_option)
         else:
-            # MODO SIMULACIÓN FAST
+            # FAST SIMULATION MODE
             modo = "fast"
             ok = inicio_comun_simulacion(fastq1, fastq2, simulacion_folder, base_dir, refseq, modo, noindel_option)
 
         if ok:
             sys.exit(0)
         else:
-            print_error("Pipeline simulación falló.")
+            print_error("Simulation pipeline failed.")
             sys.exit(1)
 
-    # Si NO es simulación => interpretamos que el primer posicional es SRR
+    # If this is NOT a simulation => interpret the first positional argument as SRR
     if len(args.positional_args) < 1:
-        print_error("Falta indicar SRR (o bien usar --simulacion con <fastq1> <fastq2> <carpetaSimulacion>).")
+        print_error("Missing SRR (or use --simulacion with <fastq1> <fastq2> <simulationFolder>).")
         sys.exit(1)
 
     srr = args.positional_args[0]
 
-    # 6) Elegir pipeline slow o fast
+    # 6) Choose slow or fast pipeline
     pipeline_attempt = 1
     while pipeline_attempt <= MAX_PIPELINE_ATTEMPTS:
         if args.slow:
@@ -2060,13 +2019,13 @@ def main():
             ok = inicio_comun(srr, base_dir, refseq, modo, noindel_option)
 
         if ok:
-            print_step("Pipeline completado exitosamente.")
+            print_step("Pipeline completed successfully.")
             sys.exit(0)
         else:
-            print_error(f"Error en el pipeline. Reintentando... (Intento {pipeline_attempt}/{MAX_PIPELINE_ATTEMPTS})")
+            print_error(f"Error in the pipeline. Retrying... (Attemp {pipeline_attempt}/{MAX_PIPELINE_ATTEMPTS})")
             pipeline_attempt += 1
 
-    print_error("Pipeline falló tras múltiples intentos.")
+    print_error("Pipeline failed after multiple attempts.")
     sys.exit(1)
 
 if __name__ == "__main__":
