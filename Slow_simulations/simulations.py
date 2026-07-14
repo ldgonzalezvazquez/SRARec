@@ -202,7 +202,7 @@ def main():
     recombinant1, recombinant2, breakpoint = generate_recombinants(sequence_1, sequence_2)
 
     # 4) Aply intrahost mutations
-    if args.mutation_intrahost:
+    if args.mutacion_intrahost:
         pi_intrahost = 0
         if args.intrahost_diversity:
             pi_intrahost = math.ceil(args.intrahost_diversity * len(sequence_1))
@@ -238,7 +238,7 @@ def main():
     fieldnames = [
         "output_prefix", "results_file", "coverage", "read_length",
         "diversity", "insertion_rate", "deletion_rate",
-        "mutation_intrahost", "intrahost_diversity", "intrahost_insertion_rate", "intrahost_deletion_rate",
+        "mutacion_intrahost", "intrahost_diversity", "intrahost_insertion_rate", "intrahost_deletion_rate",
         "parental1", "parental2", "MIN_READS_LIST", "READS_GAMETOS_MINORITARIOS_LIST", "THRESHOLD_GAMETO_FREQ_LIST",
         "breakpoint", "result","false_positives"
     ]
@@ -253,7 +253,7 @@ def main():
         "diversity": args.diversity if args.diversity is not None else "",
         "insertion_rate": args.insertion_rate if args.insertion_rate is not None else "",
         "deletion_rate": args.deletion_rate if args.deletion_rate is not None else "",
-        "mutation_intrahost": "True" if args.mutation_intrahost else "",
+        "mutacion_intrahost": "True" if args.mutacion_intrahost else "",
         "intrahost_diversity": args.intrahost_diversity if args.intrahost_diversity is not None else "",
         "intrahost_insertion_rate": args.intrahost_insertion_rate if args.intrahost_insertion_rate is not None else "",
         "intrahost_deletion_rate": args.intrahost_deletion_rate if args.intrahost_deletion_rate is not None else "",
