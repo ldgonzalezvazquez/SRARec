@@ -13,30 +13,16 @@ git clone --branch SRARec_simulations --single-branch \
 cd SRARec
 ```
 
-Then enter the directory corresponding to the workflow you want to run:
+Then enter the directory corresponding to the workflow you want to run (fast or slow simulations)
 
-```bash
-cd Fast_simulations
-```
-
-or:
-
-```bash
-cd Slow_simulations
-```
-
-If the repository has already been cloned, simply navigate to the corresponding directory:
+If the repository has already been cloned, simply navigate to the corresponding directory.
 
 ```bash
 cd SRARec/Fast_simulations
 ```
-
-or:
-
 ```bash
-cd SRARec/Slow_simulations
+cd SRARec/Fast_simulations
 ```
-
 ### 2. Check the dependencies
 
 Before launching the simulations, make sure that the required CESGA modules, Python packages and NGSNGS installation are available.
