@@ -14,15 +14,8 @@ cd SRARec
 ```
 
 Then enter the directory corresponding to the workflow you want to run (fast or slow simulations)
-
 If the repository has already been cloned, simply navigate to the corresponding directory.
 
-```bash
-cd SRARec/Fast_simulations
-```
-```bash
-cd SRARec/Fast_simulations
-```
 ### 2. Check the dependencies
 
 Before launching the simulations, make sure that the required CESGA modules, Python packages and NGSNGS installation are available.
