@@ -80,6 +80,17 @@ conda env create -f environment.yml
 conda activate srarec
 ```
 
+If the environment cannot be created correctly from `environment.yml`, you can use the provided installation script. This script creates the Conda environment and installs the required dependencies according to the selected operating system.
+
+```bash
+python3 install_srarec_env.py --system wsl --env_name srarec
+```
+After the installation is completed, activate the environment:
+
+```bash
+conda activate srarec
+```
+
 **Minimal** — Python only:
 
 ```bash
