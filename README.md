@@ -88,12 +88,6 @@ Once the parameters are ready, run:
 
 This script creates the parameter list and submits all simulations to the CESGA queue.
 
-You can check the running jobs with:
-
-```bash
-squeue -u "$USER"
-```
-
 ### 6. Check for missing simulations
 
 After all jobs have finished, check whether any configurations failed or are missing:
@@ -102,12 +96,7 @@ After all jobs have finished, check whether any configurations failed or are mis
 python3 error_check.py
 ```
 
-This creates a new file with the missing configurations:
-
-```text
-param_list_new.txt
-```
-
+This creates a new file with the missing configurations `param_list_new.txt`
 If `param_list_new.txt` is not empty, rerun the missing simulations with:
 
 ```bash
@@ -116,10 +105,6 @@ If `param_list_new.txt` is not empty, rerun the missing simulations with:
 
 Repeat this step until no missing configurations remain:
 
-```bash
-python3 error_check.py
-wc -l param_list_new.txt
-```
 
 ### 7. Generate the final results
 
