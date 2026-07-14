@@ -180,6 +180,7 @@ SRARec/
 ├── SRARec1.3.py              # Main analysis script
 ├── generate_graphs.py        # Recombination profile plots
 ├── environment.yml           # Conda environment
+├── install_srarec_env.py     # Install conda and SRARec environment with dependecies
 ├── examples/                 # Local test data (see examples/README.md)
 │   ├── README.md
 │   ├── example_1.fastq       # download from GitHub examples/
