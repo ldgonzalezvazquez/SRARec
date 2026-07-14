@@ -4,7 +4,16 @@ The simulation workflow was originally prepared for [CESGA (Galician Supercomput
 
 ### 1. Enter the simulation directory
 
-Choose the workflow you want to run:
+If the repository has not yet been downloaded, clone the branch containing the simulation workflows:
+
+```bash
+git clone --branch SRARec_simulations --single-branch \
+  https://github.com/ldgonzalezvazquez/SRARec.git
+
+cd SRARec
+```
+
+Then enter the directory corresponding to the workflow you want to run:
 
 ```bash
 cd Fast_simulations
@@ -14,6 +23,18 @@ or:
 
 ```bash
 cd Slow_simulations
+```
+
+If the repository has already been cloned, simply navigate to the corresponding directory:
+
+```bash
+cd SRARec/Fast_simulations
+```
+
+or:
+
+```bash
+cd SRARec/Slow_simulations
 ```
 
 ### 2. Check the dependencies
@@ -31,9 +52,17 @@ The path to the NGSNGS executable must also be correctly defined in `simulations
 
 ### 3. Give execution permissions
 
+Before running the workflow for the first time, give execution permissions to the shell scripts used to generate the parameter combinations, submit the jobs and execute each simulation.
+
+To give execution permission to all shell scripts in the current simulation directory:
+
+```bash
+chmod +x *.sh
+```
+Alternatively, permissions can be assigned individually:
+
 ```bash
 chmod +x <script_name>
-
 ```
 
 ### 4. Set the simulation parameters
