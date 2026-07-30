@@ -1,14 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-SRARec_RecombinationHTML
-------------------------
-
-CÓDIGO EN EL QUE TODAVÍA NO SE HA REVISADO LA OPCIÓN --exclusive-positions 
--> las posiciones solapadas en los resultados dentro de un mismo paciente se unifican al valor 
-máximo que toma esa posición en el rango más pequeño (que por tanto le da un valor más alto).
-Primando siempre el True sobre el False.
-"""
-
 import os
 import re
 from pathlib import Path
