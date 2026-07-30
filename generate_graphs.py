@@ -113,12 +113,6 @@ def _is_one_based_results(results_path: str) -> bool:
 
 
 def _parse_pairs(field: str, expect_big: bool = True, *, one_based: bool = True):
-    """
-    Parsea un campo tipo 'Rec' o 'No_Rec' en una lista de:
-        (pA, pB, bigger, mireads, minfreq)
-
-    Si el formato no cuadra, simplemente ignora entradas problemáticas.
-    """
     if field is None:
         return []
     field = str(field).strip()
@@ -174,18 +168,6 @@ def _parse_pairs(field: str, expect_big: bool = True, *, one_based: bool = True)
 
 
 def _load_events(results_path: str) -> pd.DataFrame:
-    """
-    Carga eventos de recombinación desde un results_txt.
-
-    Soporta tres formatos:
-    1) Tabla con columnas: pA, pB, true
-    2) Tabla con columnas: Rec, No_Rec
-    3) Formato SRARec clásico: línea con campos tipo:
-         Sra:...  Rec:...  No_Rec:...
-       separados por tabuladores.
-
-    Devuelve DataFrame con columnas: pA (int), pB (int), true (0/1), sra (str, opcional).
-    """
     if not os.path.exists(results_path):
         raise FileNotFoundError(f"Results file not found: {results_path}")
 
@@ -302,18 +284,6 @@ def _load_events(results_path: str) -> pd.DataFrame:
 
 
 def _count_unique_sras(results_path: str) -> int:
-    """Cuenta el número de SRAs únicos en el archivo de resultados.
-    
-    Parameters
-    ----------
-    results_path : str
-        Fichero de resultados de SRARec.
-    
-    Returns
-    -------
-    int
-        Número de SRAs únicos encontrados.
-    """
     sras = set()
     try:
         with open(results_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -335,18 +305,6 @@ def _count_unique_sras(results_path: str) -> int:
 
 
 def _count_unique_sras(results_path: str) -> int:
-    """Cuenta el número de SRAs únicos en el archivo de resultados.
-    
-    Parameters
-    ----------
-    results_path : str
-        Fichero de resultados de SRARec.
-    
-    Returns
-    -------
-    int
-        Número de SRAs únicos encontrados.
-    """
     sras = set()
     try:
         with open(results_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -368,21 +326,6 @@ def _count_unique_sras(results_path: str) -> int:
 
 
 def _compute_coverage_from_begfin(results_path: str, genome_len: int) -> np.ndarray:
-    """Construye un perfil de profundidad a partir del campo BegFin_Reads.
-
-    Parameters
-    ----------
-    results_path : str
-        Fichero de resultados de SRARec.
-    genome_len : int
-        Longitud del genoma utilizada para el perfil de recombinación.
-
-    Returns
-    -------
-    cov : np.ndarray
-        Array de longitud genome_len con el número de lecturas que cubren cada posición.
-        Si no se encuentra ningún campo BegFin_Reads, devuelve un array de ceros.
-    """
     if genome_len is None or genome_len <= 0:
         return np.zeros(0, dtype=float)
 
@@ -445,24 +388,6 @@ def _compute_coverage_from_begfin(results_path: str, genome_len: int) -> np.ndar
 
 
 def _compute_begfin_concentration(results_path: str, genome_len: int) -> np.ndarray:
-    """Construye un perfil de concentración de inicios y fin de reads a partir del campo BegFin_Reads.
-
-    Cuenta cuántos reads empiezan o terminan en cada posición, en lugar de cuántos reads
-    cubren esa posición (como hace _compute_coverage_from_begfin).
-
-    Parameters
-    ----------
-    results_path : str
-        Fichero de resultados de SRARec.
-    genome_len : int
-        Longitud del genoma utilizada para el perfil de recombinación.
-
-    Returns
-    -------
-    concentration : np.ndarray
-        Array de longitud genome_len con el número de reads que empiezan o terminan en cada posición.
-        Si no se encuentra ningún campo BegFin_Reads, devuelve un array de ceros.
-    """
     if genome_len is None or genome_len <= 0:
         return np.zeros(0, dtype=float)
 
@@ -529,7 +454,6 @@ def _compute_begfin_concentration(results_path: str, genome_len: int) -> np.ndar
 # ---------------------------------------------------------------------------
 
 def _builtin_annotation_path(script_dir: Path, virus: str = "sars-cov-2") -> Path:
-    """Ruta al GenBank incluido para referencias integradas."""
     key = str(virus).lower().replace("_", "-")
     annotations = {
         "sars-cov-2": script_dir / "reference_indexes" / "sars_cov_2" / "NC_045512.2.gb",
@@ -556,17 +480,6 @@ def _builtin_annotation_path(script_dir: Path, virus: str = "sars-cov-2") -> Pat
 # ---------------------------------------------------------------------------
 
 def _load_genes(annotation_path: str, genome_len: Optional[int] = None):
-    """
-    Carga anotaciones génicas desde un archivo GenBank.
-
-    Usa features de tipo 'CDS' (Coding Sequence) para obtener solo las regiones codificantes.
-    Si un CDS tiene múltiples exones (join()), cada exón se carga como una región separada.
-    Devuelve:
-      - genes_df: DataFrame con columnas: start, end, name, track
-      - genome_length: largo del genoma del GenBank
-
-    El campo 'track' indica en qué fila se debe dibujar la región para evitar solapamientos.
-    """
     if not annotation_path:
         return pd.DataFrame(), None
     if not os.path.exists(annotation_path):
@@ -685,14 +598,6 @@ def _load_genes(annotation_path: str, genome_len: Optional[int] = None):
 
 
 def _asignar_pistas_por_gen(genes_with_regions):
-    """
-    Asigna pistas (tracks) a genes considerando cada gen como una unidad.
-    Todas las regiones de un mismo gen comparten el mismo track.
-    
-    Input: lista de tuplas (min_start, max_end, name, regions)
-           donde regions es una lista de tuplas (start, end)
-    Output: lista de tuplas (name, track, regions)
-    """
     pistas_fin = []  # último "max_end" de cada pista
     genes_con_pista = []
     
@@ -720,33 +625,6 @@ def compute_recombination_profile(events: pd.DataFrame,
                                   alpha: float = 1.0,
                                   exclusive_positions: bool = False,
                                   aggregate_by_patient: bool = False):
-    """
-    Calcula el perfil global de recombinación (ρ) a lo largo del genoma.
-
-    Sigue la idea del script grande:
-      - Para cada evento (pA, pB), con pA < pB:
-          * contribuye con peso 1/(b-a) a todas las posiciones [a, b)
-          * se separan eventos true (1) y false (0)
-      - ρ(i) = alpha * true(i) / (true(i) + false(i)) cuando hay eventos.
-
-    Parámetros
-    ----------
-    events : DataFrame con columnas pA, pB, true.
-    genome_len : int, opcional
-        Si no se da, se usa max(pA, pB) + 1.
-    alpha : float
-        Factor de escala (por defecto 1.0, usa el mismo que en tu script si quieres).
-    exclusive_positions : bool
-        Si True, para cada posición se toma el máximo valor entre rangos true/false
-        y, si hay ambos, se conserva true y se descarta false.
-    aggregate_by_patient : bool
-        Si True, calcula valores por paciente (Sra) y luego suma T/F por posición.
-
-    Returns
-    -------
-    positions : np.ndarray de ints
-    rho       : np.ndarray de floats
-    """
     if events.empty:
         raise ValueError("No events available to compute recombination profile.")
 
@@ -838,24 +716,6 @@ def _generate_matplotlib_figure(
     output_png: str = None,
     title: str = "Genome-wide recombination ratio"
 ):
-    """
-    Genera una figura matplotlib similar al script proporcionado.
-    
-    Parameters
-    ----------
-    positions : np.ndarray
-        Posiciones del genoma.
-    rho : np.ndarray
-        Valores de ρ (ratio de recombinación).
-    coverage : np.ndarray, opcional
-        Valores de cobertura (BegFin_Reads).
-    genes_df : pd.DataFrame, opcional
-        DataFrame con genes (columnas: start, end, name, track).
-    output_png : str, opcional
-        Ruta de salida para el PNG.
-    title : str
-        Título del gráfico.
-    """
     if not MATPLOTLIB_AVAILABLE:
         print("[WARN] Matplotlib not available, skipping PNG generation.")
         return
@@ -1096,41 +956,6 @@ def generate_recombination_html(
     exclusive_positions: bool = False,
     aggregate_by_patient: bool = False
 ) -> str:
-    """
-    Genera un HTML con un gráfico interactivo (Plotly) de ρ a lo largo del genoma.
-
-    - Soporta zoom, pan, selección de rango, exportar como PNG, etc.
-    - No incluye callbacks de clic personalizados ni popups extra.
-
-    Parámetros
-    ----------
-    results_path : str
-        Ruta al results_txt de SRARec.
-    output_html : str, opcional
-        Ruta de salida. Si es None, usa "<basename>_recomb_profile.html".
-    alpha : float
-        Factor de escala para ρ (usa el mismo valor que en tu Graphs.py si quieres).
-    genome_len : int, opcional
-        Largo del genoma. Si None, se infiere del máximo pA/pB.
-    title : str
-        Título del gráfico.
-    annotation_path : str, opcional
-        Ruta a archivo NCBI de anotación (GenBank .gb/.gbff o GFF3 .gff/.gff3).
-        Si se proporciona, se crea una pista de genes debajo del perfil de recombinación.
-    gene_track_label : str
-        Etiqueta mostrada para la pista de genes.
-    exclusive_positions : bool
-        Si True, no permite solapamientos true/false por posición y
-        conserva el máximo valor por posición (true domina a false).
-    aggregate_by_patient : bool
-        Si True, agrega por paciente antes de sumar T/F por posición.
-
-    Returns
-    -------
-    output_html : str
-        Ruta al archivo HTML generado.
-    """
-    # Genes opcionales (si se proporciona anotación) - CARGAR PRIMERO para obtener genome_len
     genes_df = None
     gb_genome_len = None
     if annotation_path:
