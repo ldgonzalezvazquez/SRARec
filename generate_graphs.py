@@ -14,10 +14,8 @@ except ImportError as e:
     raise ImportError(
         "Missing dependency 'plotly'. Install it with:\n"
         "    pip install plotly\n"
-        "or añádelo a requirements.txt del entorno de la GUI."
     ) from e
 
-# Matplotlib es opcional, para generar figuras PNG
 try:
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
@@ -27,17 +25,11 @@ except ImportError:
     plt = None
     mpatches = None
 
-# Biopython es opcional, sólo para GenBank
 try:
     from Bio import SeqIO
 except ImportError:
     SeqIO = None
 
-# ---------------------------------------------------------------------------
-# Parsing helpers (basados en tu script original)
-# ---------------------------------------------------------------------------
-
-# Ejemplo de campo:
 #   "100,200,1[mireads=50][minfreq=0.02];250,400,1[mireads=30][minfreq=0.01]"
 _mire = re.compile(r"mireads=(\d+)")
 _mfre = re.compile(r"minfreq=([0-9]*\.?[0-9]+)")
@@ -172,10 +164,6 @@ def _load_events(results_path: str) -> pd.DataFrame:
         raise FileNotFoundError(f"Results file not found: {results_path}")
 
     one_based = _is_one_based_results(results_path)
-
-    # --- Pequeño "sniff" para evitar leer con pandas los resultados SRARec gigantes ---
-    # Si detectamos un formato clásico de SRARec (Sra:/Rec:/No_Rec:), NO usamos read_csv,
-    # y pasamos directamente al parser línea a línea (mucho más ligero en RAM).
     is_srarec_style = False
     try:
         with open(results_path, "r", encoding="utf-8", errors="ignore") as fh:
@@ -232,7 +220,6 @@ def _load_events(results_path: str) -> pd.DataFrame:
             if rows:
                 return pd.DataFrame(rows, columns=["pA", "pB", "true"])
 
-    # --- Intento 2: formato SRARec tipo "clave:valor" por línea ---
     rows = []
     with open(results_path, "r", encoding="utf-8", errors="ignore") as f:
         # Contar líneas primero para la barra de progreso
@@ -244,7 +231,6 @@ def _load_events(results_path: str) -> pd.DataFrame:
             if not line or line.startswith("#"):
                 continue
 
-            # Campos separados por tabuladores: Sra:..., Coinf_detected:..., Rec:..., No_Rec:...
             parts = line.split("\t")
             rec_field = None
             norec_field = None
@@ -431,7 +417,6 @@ def _compute_begfin_concentration(results_path: str, genome_len: int) -> np.ndar
                         start -= 1
                         end -= 1
 
-                    # Asegurar límites dentro del genoma
                     if end < 0 or start >= genome_len:
                         continue
                     start = max(start, 0)
@@ -439,19 +424,14 @@ def _compute_begfin_concentration(results_path: str, genome_len: int) -> np.ndar
                     if start > end:
                         continue
 
-                    # Contar inicios y fin de reads
-                    concentration[start] += 1  # Inicio del read
-                    concentration[end] += 1     # Fin del read
+                    concentration[start] += 1
+                    concentration[end] += 1
     except OSError as e:
         print(f"[WARN] Could not read BegFin_Reads from {results_path}: {e}")
         return np.zeros(0, dtype=float)
 
     return concentration.astype(float)
 
-
-# ---------------------------------------------------------------------------
-# Anotaciones GenBank incluidas en el repositorio
-# ---------------------------------------------------------------------------
 
 def _builtin_annotation_path(script_dir: Path, virus: str = "sars-cov-2") -> Path:
     key = str(virus).lower().replace("_", "-")
@@ -473,11 +453,6 @@ def _builtin_annotation_path(script_dir: Path, virus: str = "sars-cov-2") -> Pat
         known = ", ".join(sorted(set(annotations)))
         raise ValueError(f"Unknown built-in virus for annotation: {virus}. Known: {known}")
     return path
-
-
-# ---------------------------------------------------------------------------
-# Carga de genes desde anotación NCBI (GenBank o GFF3)
-# ---------------------------------------------------------------------------
 
 def _load_genes(annotation_path: str, genome_len: Optional[int] = None):
     if not annotation_path:
@@ -504,22 +479,18 @@ def _load_genes(annotation_path: str, genome_len: Optional[int] = None):
             print(f"[DEBUG] Parsing GenBank record: {record.id}, length={genome_length}")
             
             for feat in record.features:
-                if feat.type == 'CDS':  # Usar CDS en lugar de 'gene' para obtener solo regiones codificantes
+                if feat.type == 'CDS':
                     try:
-                        # Obtener el nombre del gen
                         name = feat.qualifiers.get('gene', [''])[0]
                         if not name or not name.strip():
-                            # Intentar con locus_tag como alternativa
                             name = feat.qualifiers.get('locus_tag', [''])[0]
                             if not name or not name.strip():
                                 name = f"CDS_{int(feat.location.start) + 1}"
                         
-                        # Parsear las regiones codificantes (puede haber múltiples en un join())
-                        # feat.location puede ser una SimpleLocation o CompoundLocation (join)
                         if hasattr(feat.location, 'parts'):
                             # Es un join() con múltiples partes
                             for part in feat.location.parts:
-                                start = int(part.start) + 1  # 1-based como en Graphs.py
+                                start = int(part.start) + 1
                                 end = int(part.end)
                                 
                                 if end <= start:
@@ -529,7 +500,7 @@ def _load_genes(annotation_path: str, genome_len: Optional[int] = None):
                                 print(f"[DEBUG] Added CDS region: {name} ({start}-{end})")
                         else:
                             # Es una región simple
-                            start = int(feat.location.start) + 1  # 1-based como en Graphs.py
+                            start = int(feat.location.start) + 1
                             end = int(feat.location.end)
                             
                             if end <= start:
@@ -549,7 +520,6 @@ def _load_genes(annotation_path: str, genome_len: Optional[int] = None):
             return pd.DataFrame(), None
 
     else:
-        # Formato no soportado
         raise ValueError(
             f"Unsupported annotation format for genes: {annotation_path}\n"
             "Use GenBank (.gb/.gbk/.gbff)."
@@ -559,32 +529,25 @@ def _load_genes(annotation_path: str, genome_len: Optional[int] = None):
         print(f"[WARN] No CDS regions parsed from annotation file: {annotation_path}")
         return pd.DataFrame(columns=["start", "end", "name", "track"]), genome_length
 
-    # Agrupar regiones por nombre de gen
     genes_dict = {}
     for start, end, name in genes_list:
         if name not in genes_dict:
             genes_dict[name] = []
         genes_dict[name].append((start, end))
     
-    # Ordenar las regiones de cada gen por posición de inicio
     for name in genes_dict:
         genes_dict[name].sort(key=lambda x: x[0])
     
-    # Crear lista de genes con todas sus regiones para asignar tracks
     genes_with_regions = []
     for name, regions in genes_dict.items():
-        # Encontrar el inicio mínimo y fin máximo de todas las regiones del gen
         min_start = min(r[0] for r in regions)
         max_end = max(r[1] for r in regions)
         genes_with_regions.append((min_start, max_end, name, regions))
     
-    # Ordenar genes por posición de inicio mínima
     genes_with_regions.sort(key=lambda x: x[0])
     
-    # Asignar pistas considerando cada gen como una unidad (todas sus regiones en el mismo track)
     genes_with_track = _asignar_pistas_por_gen(genes_with_regions)
     
-    # Expandir las regiones de vuelta a la lista plana con el track asignado
     expanded_regions = []
     for name, track, regions in genes_with_track:
         for start, end in regions:
@@ -616,9 +579,6 @@ def _asignar_pistas_por_gen(genes_with_regions):
     
     return genes_con_pista
 
-# ---------------------------------------------------------------------------
-# Cálculo del perfil de recombinación global (tipo gráfico 2)
-# ---------------------------------------------------------------------------
 
 def compute_recombination_profile(events: pd.DataFrame,
                                   genome_len: int = None,
@@ -628,7 +588,6 @@ def compute_recombination_profile(events: pd.DataFrame,
     if events.empty:
         raise ValueError("No events available to compute recombination profile.")
 
-    # Limpiar y asegurar tipos
     ev = events.copy()
     ev["pA"] = pd.to_numeric(ev["pA"], errors="coerce")
     ev["pB"] = pd.to_numeric(ev["pB"], errors="coerce")
@@ -675,7 +634,6 @@ def compute_recombination_profile(events: pd.DataFrame,
             pos_t += s_pos_t
             pos_f += s_pos_f
     else:
-        # Sumar contribuciones globales
         for _, row in tqdm(ev.iterrows(), total=len(ev), desc="Computing profile"):
             a = int(row["pA"])
             b = int(row["pB"])
@@ -693,7 +651,6 @@ def compute_recombination_profile(events: pd.DataFrame,
                 else:
                     pos_f[a:b] += w
         if exclusive_positions:
-            # Si hay ambos estados en una posición, conservar true
             pos_f = np.where(pos_t > 0.0, 0.0, pos_f)
 
     tot = pos_t + pos_f
@@ -702,10 +659,6 @@ def compute_recombination_profile(events: pd.DataFrame,
 
     positions = np.arange(1, genome_len + 1, dtype=int)
     return positions, rho
-
-# ---------------------------------------------------------------------------
-# Generación de figura matplotlib
-# ---------------------------------------------------------------------------
 
 def _generate_matplotlib_figure(
     positions: np.ndarray,
@@ -721,10 +674,8 @@ def _generate_matplotlib_figure(
         return
     
     fig, ax = plt.subplots(figsize=(12, 6))
-    # Asegurar que la rejilla quede por detrás de las líneas de datos
     ax.set_axisbelow(True)
     
-    # Posiciones 1-based en el eje X
     x = positions
     rho_plot = rho
     
@@ -732,11 +683,9 @@ def _generate_matplotlib_figure(
     if max_rho <= 0:
         ymax = 0.05
     else:
-        # Máximo dinámico sin sobrepasar 1.0, con +5% de margen visual
         ymax = min(max_rho, 1.0)
     y_axis_top = min(ymax * 1.05, 1.0)
     
-    # Estilos consistentes con el HTML: azul encima, roja/gris visibles sin eclipsar
     PNG_BLUE_WIDTH = 1.1
     PNG_RED_WIDTH = 1.2
     PNG_GRAY_WIDTH = 1.0
@@ -744,12 +693,9 @@ def _generate_matplotlib_figure(
     PNG_RED_ALPHA = 0.45
     PNG_GRAY_ALPHA = 0.55
 
-    # Línea azul de recombinación (por encima de las demás)
     ax.plot(x, rho_plot, color="#5C6BC0", linewidth=PNG_BLUE_WIDTH, alpha=PNG_BLUE_ALPHA, zorder=3)
     
-    # Añadir línea de cobertura si está disponible (por encima de la línea azul)
     if coverage is not None and coverage.size > 0:
-        # Escalar la cobertura para que se vea en el mismo rango
         coverage_plot = coverage
         cov_len = min(len(coverage_plot), len(x))
         if cov_len > 0:
@@ -757,15 +703,12 @@ def _generate_matplotlib_figure(
             x_cov = x[:cov_len]
             max_cov = float(np.max(coverage_scaled)) if coverage_scaled.size > 0 else 0.0
             if max_cov > 0 and max_rho > 0:
-                # Escalar para que el máximo de cobertura coincida con el máximo de rho
                 scale_factor = max_rho / max_cov
                 coverage_scaled = coverage_scaled * scale_factor
             ax.plot(x_cov, coverage_scaled, color="#555555", linewidth=PNG_GRAY_WIDTH, linestyle="--",
                    label="Analysis depth", alpha=PNG_GRAY_ALPHA, zorder=2)
     
-    # Añadir línea de concentración de inicios/fin de reads si está disponible (por encima de la línea azul)
     if begfin_concentration is not None and begfin_concentration.size > 0:
-        # Escalar la concentración para que se vea en el mismo rango
         concentration_plot = begfin_concentration
         conc_len = min(len(concentration_plot), len(x))
         if conc_len > 0:
@@ -773,45 +716,35 @@ def _generate_matplotlib_figure(
             x_conc = x[:conc_len]
             max_conc = float(np.max(concentration_scaled)) if concentration_scaled.size > 0 else 0.0
             if max_conc > 0 and max_rho > 0:
-                # Escalar para que el máximo de concentración coincida con el máximo de rho
                 scale_factor = max_rho / max_conc
                 concentration_scaled = concentration_scaled * scale_factor
             ax.plot(x_conc, concentration_scaled, color="#FF0000", linewidth=PNG_RED_WIDTH, linestyle="--",
                    label="Read start/end density", alpha=PNG_RED_ALPHA, zorder=2)
     
-    # Dibujar genes si están disponibles
-    # Usar altura fija para la pista de genes que no dependa del rango del eje Y
-    # La altura se calcula como una fracción fija del rango del eje Y para mantener consistencia visual
     num_tracks = 0
     unique_genes = []
     gene_colors = {}
-    # Altura fija de la pista de genes en unidades de datos (fracción fija del rango)
-    gene_track_fraction = 0.05  # 5% del rango del eje Y para la altura total de genes (más gordas)
-    gene_track_spacing_fraction = 0.02  # 2% adicional para el espaciado (menos separación)
-    gene_bottom_offset_fraction = 0.05  # 5% adicional del rango del eje Y para separar los genes del 0
+    gene_track_fraction = 0.05
+    gene_track_spacing_fraction = 0.02
+    gene_bottom_offset_fraction = 0.05
     
     if genes_df is not None and not genes_df.empty:
-        # Obtener colores únicos para cada gen
         unique_genes = genes_df['name'].unique()
         try:
-            # Usar la nueva API de matplotlib (3.7+)
             import matplotlib
             if hasattr(matplotlib, 'colormaps'):
                 cmap_genes = matplotlib.colormaps['Set3'].resampled(len(unique_genes))
             else:
                 cmap_genes = plt.cm.get_cmap("Set3", len(unique_genes))
         except (AttributeError, KeyError):
-            # Fallback para versiones antiguas de matplotlib
             cmap_genes = plt.cm.get_cmap("Set3", len(unique_genes))
         gene_colors = {name: cmap_genes(i) for i, name in enumerate(unique_genes)}
         
         num_tracks = int(genes_df['track'].max()) + 1 if 'track' in genes_df.columns else 1
-        # Calcular altura de cada track como fracción fija del rango del eje Y
         total_gene_height = ymax * gene_track_fraction
         track_height = total_gene_height / max(num_tracks, 1)
         track_spacing = ymax * gene_track_spacing_fraction
         
-        # Agrupar regiones por gen y track para añadir líneas discontinuas
         genes_by_name_track = {}
         for idx, g in genes_df.iterrows():
             start = int(g["start"])
@@ -824,18 +757,15 @@ def _generate_matplotlib_figure(
                 genes_by_name_track[key] = []
             genes_by_name_track[key].append((start, end))
         
-        # Ordenar regiones por cada gen
         for key in genes_by_name_track:
             genes_by_name_track[key].sort(key=lambda x: x[0])
         
-        # Dibujar genes agrupados
         for (name, track), regions in genes_by_name_track.items():
             color = gene_colors.get(name, "gray")
             bottom_offset = ymax * gene_bottom_offset_fraction
             y_bottom = -(bottom_offset + track_spacing + track * (track_height + track_spacing))
             y_center = y_bottom + (track_height / 2)
             
-            # Dibujar cada región codificante
             for start, end in regions:
                 width = end - start
                 ax.broken_barh(
@@ -847,57 +777,43 @@ def _generate_matplotlib_figure(
                     zorder=0  # Por debajo del cuadro
                 )
             
-            # Añadir líneas discontinuas entre regiones del mismo gen
             if len(regions) > 1:
                 for i in range(len(regions) - 1):
-                    # Línea desde el final de la región i hasta el inicio de la región i+1
                     end_prev = regions[i][1]
                     start_next = regions[i+1][0]
                     
-                    # Línea discontinua
                     ax.plot([end_prev, start_next], [y_center, y_center], 
                            color=color, linestyle='--', linewidth=0.5, alpha=0.7, zorder=0)  # Por debajo del cuadro
     
     x_min = 1
     x_max = positions[-1] if len(positions) > 0 else 29903
-    # Calcular y_min basado en la altura fija de los genes
-    # Necesitamos calcular el espacio necesario para todos los tracks
     if num_tracks > 0:
         bottom_offset = ymax * gene_bottom_offset_fraction
-        # Calcular el espacio necesario para el último track
         last_track_y_bottom = -(bottom_offset + track_spacing + (num_tracks - 1) * (track_height + track_spacing))
-        # y_min debe incluir el último track completo más un pequeño margen
         y_min = last_track_y_bottom - track_height - (ymax * 0.01)  # Pequeño margen adicional
     else:
         y_min = -ymax * 0.02  # Pequeño margen si no hay genes
     
     ax.set_xlim(x_min, x_max)
-    # IMPORTANTE: Establecer ylim ANTES de establecer los ticks para evitar que los ticks fuercen el rango
     ax.set_ylim(y_min, y_axis_top)
     
-    # Ticks hasta el máximo visible (con tope 1.0)
     num_ticks = 6
     y_ticks = np.linspace(0.0, min(1.0, y_axis_top), num_ticks)
     ax.set_yticks(y_ticks)
     
-    # Formatear los ticks para mostrar máximo 2 decimales
     from matplotlib.ticker import FuncFormatter
     def format_y_tick(value, pos):
         return f'{value:.2f}'
     ax.yaxis.set_major_formatter(FuncFormatter(format_y_tick))
     
-    # Asegurar que el límite del eje Y se mantenga en ymax (no permitir que matplotlib lo ajuste)
     ax.set_ylim(y_min, y_axis_top)
     ax.set_xlabel("Position")
     ax.set_ylabel("FGT Ratio")
     ax.set_title(title)
-    # Rejilla por detrás de las líneas (axisbelow=True)
     ax.grid(True, alpha=0.3)
     
-    # Crear leyenda combinada: primero las líneas (recombinación y cobertura), luego los genes
     handles, labels = ax.get_legend_handles_labels()
     
-    # Leyenda de genes si están disponibles
     if genes_df is not None and not genes_df.empty:
         gene_patches = []
         for gname in unique_genes:
@@ -909,11 +825,9 @@ def _generate_matplotlib_figure(
             )
             gene_patches.append(patch)
         
-        # Combinar handles: primero las líneas, luego los genes
         all_handles = handles + gene_patches
         all_labels = labels + [gname for gname in unique_genes]
         
-        # Leyenda debajo del eje X (position)
         gene_legend = ax.legend(
             handles=all_handles,
             labels=all_labels,
@@ -924,7 +838,6 @@ def _generate_matplotlib_figure(
         )
         plt.subplots_adjust(top=0.90, bottom=0.25)  # Más espacio abajo para Position
     else:
-        # Si no hay genes, solo mostrar leyenda de líneas debajo del eje X
         if handles:
             ax.legend(handles=handles, labels=labels, loc="upper center", 
                      bbox_to_anchor=(0.5, -0.10), fontsize="small", ncol=len(handles))
@@ -938,10 +851,6 @@ def _generate_matplotlib_figure(
     
     plt.close(fig)
 
-
-# ---------------------------------------------------------------------------
-# Generación del HTML interactivo
-# ---------------------------------------------------------------------------
 
 def generate_recombination_html(
     results_path: str,
@@ -965,16 +874,13 @@ def generate_recombination_html(
                 print("[INFO] Annotation provided but no genes found; skipping gene track.")
                 genes_df = None
         except Exception as e:
-            # No abortar la figura si falla la anotación: sólo avisar por consola
             print(f"[WARN] Could not load genes from {annotation_path}: {e}")
             genes_df = None
     
-    # Usar genome_len del GenBank si está disponible, sino el especificado
     if gb_genome_len is not None:
         genome_len = gb_genome_len
         print(f"[INFO] Using genome length from GenBank: {genome_len}")
     
-    # Contar SRAs únicos para el título
     num_sras = _count_unique_sras(results_path)
     if title == "Genome-wide recombination ratio":
         title = f"Genome-wide recombination ratio ({num_sras} SRAs)"
@@ -983,7 +889,7 @@ def generate_recombination_html(
     if exclusive_positions and not aggregate_by_patient and "sra" in events.columns:
         if events["sra"].notna().any():
             aggregate_by_patient = True
-            print("[INFO] exclusive_positions activo: agregando por paciente para evitar 0/1 global.")
+            print("[INFO] exclusive_positions activo: adding per patient to avoid global 0/1.")
     positions, rho = compute_recombination_profile(events,
                                                    genome_len=genome_len,
                                                    alpha=alpha,
@@ -992,7 +898,6 @@ def generate_recombination_html(
 
     L = int(positions[-1]) + 1 if len(positions) else genome_len
 
-    # Crear mapa de posición a genes para el hover (puede haber múltiples genes por posición)
     genes_at_pos = {}
     if genes_df is not None:
         for idx, g in genes_df.iterrows():
@@ -1005,7 +910,6 @@ def generate_recombination_html(
                         genes_at_pos[pos] = []
                     genes_at_pos[pos].append(name)
     
-    # Crear texto hover personalizado con anotación de genes (múltiples si aplica)
     hover_text = []
     for i, pos in enumerate(positions):
         gene_names = genes_at_pos.get(int(pos), [])
@@ -1015,12 +919,11 @@ def generate_recombination_html(
         else:
             hover_text.append(f"Position: {pos}<br>ρ: {rho[i]:.4f}")
 
-    # Perfil de profundidad (coverage) a partir de BegFin_Reads
     cov_positions = None
     cov_millions = None
     cov_hover = None
     max_cov_millions = 0.0
-    coverage_full = None  # Mantener el coverage completo para matplotlib y archivos
+    coverage_full = None
 
     if not skip_coverage:
         coverage_full = _compute_coverage_from_begfin(results_path, genome_len=genome_len)
@@ -1038,12 +941,11 @@ def generate_recombination_html(
                 for pos, cov in zip(cov_positions, coverage)
             ]
 
-    # Perfil de concentración de inicios/fin de reads a partir de BegFin_Reads
     begfin_conc_positions = None
     begfin_conc_millions = None
     begfin_conc_hover = None
     max_begfin_conc_millions = 0.0
-    begfin_concentration_full = None  # Mantener la concentración completa para matplotlib y archivos
+    begfin_concentration_full = None
 
     if not skip_begfin_concentration:
         begfin_concentration_full = _compute_begfin_concentration(results_path, genome_len=genome_len)
@@ -1061,7 +963,6 @@ def generate_recombination_html(
                 for pos, conc in zip(begfin_conc_positions, begfin_concentration)
             ]
 
-    # Figura principal (perfil de recombinación)
     ROW_HEIGHTS = [0.78, 0.22]
     VERTICAL_SPACING = 0.06
 
@@ -1082,7 +983,6 @@ def generate_recombination_html(
     else:
         fig = make_subplots(rows=1, cols=1, shared_xaxes=True)
 
-    # Ajustes de visualización para asegurar lectura clara en vista completa
     RED_OVERVIEW_THRESHOLD = 10000
     RED_OVERVIEW_TARGET_BINS = 2000
     GL_THRESHOLD = 12000
@@ -1092,19 +992,15 @@ def generate_recombination_html(
     GRAY_LINE_WIDTH = 1.0
     GRAY_OPACITY = 0.55
 
-    # Definir rango de Y (no negativos en el eje) y calcular posición de barras FUERA del gráfico
     max_rho = float(np.max(rho)) if rho.size else 0.0
     if max_rho <= 0:
         ymax = 0.05
         ymin = 0
     else:
-        # El máximo del eje Y debe ser un poco más que el máximo de la línea de recombinación
         ymax = max_rho * 1.1
         ymin = 0
 
-    # Añadir traza de profundidad si la hemos podido calcular
     if cov_positions is not None and cov_millions is not None and max_cov_millions > 0:
-        # Escalar la cobertura para que ambos ejes muestren los mismos valores
         if max_rho > 0:
             scale_factor = max_rho / max_cov_millions
         else:
@@ -1125,9 +1021,7 @@ def generate_recombination_html(
             showlegend=True
         ), row=1, col=1)
     
-    # Añadir traza de concentración de inicios/fin de reads si la hemos podido calcular
     if begfin_conc_positions is not None and begfin_conc_millions is not None and max_begfin_conc_millions > 0:
-        # Escalar la concentración para que ambos ejes muestren los mismos valores
         if max_rho > 0:
             scale_factor = max_rho / max_begfin_conc_millions
         else:
@@ -1149,22 +1043,19 @@ def generate_recombination_html(
             showlegend=True
         ), row=1, col=1)
     
-    # Barras de genes con múltiples pistas (tracks) para solapamientos
     shapes = []
     legend_traces = []
     palette = ['#636efa', '#EF553B', '#00cc96', '#ab63fa', '#FFA15A', '#19d3f3',
                '#FF6692', '#B6E880', '#FF97FF', '#FECB52', '#7A5195', '#1F77B4']
 
-    gene_colors = {}  # Diccionario para asignar colores por nombre de gen
-    genes_in_legend = set()  # Para evitar duplicados en la leyenda
+    gene_colors = {}
+    genes_in_legend = set()
 
     if use_gene_track and genes_df is not None and 'track' in genes_df.columns:
-        # Obtener nombres únicos de genes y asignar colores
         unique_genes = genes_df['name'].unique()
         for i, gene_name in enumerate(unique_genes):
             gene_colors[gene_name] = palette[i % len(palette)]
         
-        # Agrupar regiones por gen y track para añadir líneas discontinuas
         genes_by_name_track = {}
         for idx, g in genes_df.iterrows():
             start = int(g["start"])
@@ -1177,11 +1068,9 @@ def generate_recombination_html(
                 genes_by_name_track[key] = []
             genes_by_name_track[key].append((start, end))
         
-        # Ordenar regiones por cada gen
         for key in genes_by_name_track:
             genes_by_name_track[key].sort(key=lambda x: x[0])
         
-        # Geometría fija en el eje de genes (y2), estable entre datasets
         GENE_BAND_TOP = 0.90
         GENE_BAND_BOTTOM = 0.10
         TRACK_SPACING_RATIO = 0.35
@@ -1191,13 +1080,10 @@ def generate_recombination_html(
         
         for (name, track), regions in genes_by_name_track.items():
             color = gene_colors.get(name, palette[0])
-            # Bajar más las barras para que estén bien separadas de las líneas de datos
-            # Layout: líneas arriba -> espacio -> genes -> espacio -> Position -> espacio -> leyenda
             y_top = GENE_BAND_TOP - (track * (track_height + track_spacing))
             y_bottom = y_top - track_height
             y_center = (y_top + y_bottom) / 2.0
             
-            # Dibujar cada región codificante
             for start, end in regions:
                 shapes.append(dict(
                     type="rect",
@@ -1208,18 +1094,15 @@ def generate_recombination_html(
                     y0=y_bottom,
                     y1=y_bottom + track_height,
                     fillcolor=color,
-                    line=dict(width=1.0, color="white"),  # Más gordas las líneas
+                    line=dict(width=1.0, color="white"),
                     layer="below"
                 ))
             
-            # Añadir líneas discontinuas entre regiones del mismo gen
             if len(regions) > 1:
                 for i in range(len(regions) - 1):
-                    # Línea desde el final de la región i hasta el inicio de la región i+1
                     end_prev = regions[i][1]
                     start_next = regions[i+1][0]
                     
-                    # Línea discontinua simple
                     shapes.append(dict(
                         type="line",
                         xref="x2",
@@ -1228,11 +1111,10 @@ def generate_recombination_html(
                         x1=start_next,
                         y0=y_center,
                         y1=y_center,
-                        line=dict(width=0.5, color=color, dash="dash"),  # Línea discontinua más fina
+                        line=dict(width=0.5, color=color, dash="dash"),
                         layer="below"
                     ))
 
-            # Leyenda: solo añadir una vez por gen (no por región)
             if name not in genes_in_legend:
                 legend_traces.append(go.Scatter(
                     x=[None], y=[None],
@@ -1247,7 +1129,6 @@ def generate_recombination_html(
     for trace in legend_traces:
         fig.add_trace(trace, row=1, col=1)
 
-    # Azul siempre arriba: añadir al final para máxima visibilidad
     blue_scatter = go.Scattergl if len(positions) > GL_THRESHOLD else go.Scatter
     fig.add_trace(blue_scatter(
         x=positions,
@@ -1262,7 +1143,6 @@ def generate_recombination_html(
         legendrank=1
     ), row=1, col=1)
 
-    # Layout estable y sin solapes
     MARGIN = dict(l=80, r=30, t=70, b=140)
     LEGEND_Y = -0.15
     X_TITLE_STANDOFF = 30
@@ -1276,9 +1156,6 @@ def generate_recombination_html(
         caption_parts.append("Gris: profundidad de análisis (escalada)")
     caption_text = " | ".join(caption_parts)
 
-    # --- Compatibilidad Plotly ---
-    # `ticklabelstandoff` no existe en algunas versiones (p.ej. 5.18.0),
-    # así que lo intentamos y, si falla, reintentamos sin esa propiedad.
     xaxis_bottom_cfg = dict(
         title=dict(text="Position", standoff=X_TITLE_STANDOFF),
         automargin=True,
@@ -1368,10 +1245,8 @@ def generate_recombination_html(
         else:
             raise
 
-    # Determinar base para nombres de archivos
     base = os.path.splitext(os.path.basename(results_path))[0]
     
-    # Añadir timestamp si no se especifica output_html (para identificar resultados más recientes)
     from datetime import datetime
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
@@ -1380,21 +1255,16 @@ def generate_recombination_html(
     if output_html is None:
         output_html = f"{base}_recomb_profile_{timestamp}.html"
 
-    # full_html=True + include_plotlyjs='cdn' → archivo autocontenido (salvo CDN), perfecto para abrir desde la GUI
     fig.write_html(output_html, full_html=True, include_plotlyjs="cdn")
-    
-    # Generar figura matplotlib
+
     if use_timestamp:
         output_png = f"{base}_recomb_profile_{timestamp}.png"
     else:
-        # Si se especificó output_html, usar el mismo patrón para PNG
         png_base = os.path.splitext(output_html)[0]
         output_png = f"{png_base}.png"
-    # Preparar coverage para matplotlib (en millones, igual que en Plotly)
     coverage_for_matplotlib = None
     if coverage_full is not None and coverage_full.size > 0:
         coverage_for_matplotlib = coverage_full / 1e6  # Convertir a millones
-    # Preparar concentración de begfin para matplotlib (en millones, igual que en Plotly)
     begfin_conc_for_matplotlib = None
     if begfin_concentration_full is not None and begfin_concentration_full.size > 0:
         begfin_conc_for_matplotlib = begfin_concentration_full / 1e6  # Convertir a millones
@@ -1408,8 +1278,6 @@ def generate_recombination_html(
         title=title
     )
     
-    # Guardar archivos con valores
-    # 1) Valores de recombinación por posición
     if use_timestamp:
         recomb_output = f"{base}_recombination_values_{timestamp}.txt"
     else:
@@ -1420,13 +1288,11 @@ def generate_recombination_html(
             f.write(f"{pos}\t{r:.6f}\n")
     print(f"[INFO] Recombination values saved to: {recomb_output}")
     
-    # 2) Valores de cobertura (BegFin_Reads) por posición
     if coverage_full is not None and coverage_full.size > 0:
         if use_timestamp:
             coverage_output = f"{base}_coverage_values_{timestamp}.txt"
         else:
             coverage_output = f"{base}_coverage_values.txt"
-        # Asegurar que tenemos las posiciones correctas para el coverage
         cov_pos_for_file = positions[:len(coverage_full)] if len(coverage_full) <= len(positions) else positions
         coverage_for_file = coverage_full[:len(cov_pos_for_file)]
         with open(coverage_output, "w") as f:
