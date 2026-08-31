@@ -278,8 +278,6 @@ def run_bwa_mem(refseq, fastq1, fastq2, output_sam, output_bam, platform,min_fra
         print(f"[ERROR] Unexpected error: {e}")
         sys.exit(1)
 
-# SCAN_REGION_FOR_POLYMORPHISMS FUNCTION BLOCK - NEEDS MAJOR OPTIMIZATION. I HAVE EXAMPLES IN CHATGPT (REFERENCE JUMP IN PILEUP):
-
 def _get_base_or_indel_at_pos_indel(read, pos, ref_fasta=None, ref_name=None, noindel=False):
     """
     Returns (event, quality) for reference position 'pos' (0-based).
