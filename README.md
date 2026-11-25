@@ -89,7 +89,7 @@ On Apple Silicon (M1, M2, M3…) create the environment for `osx-64` (runs throu
 If the environment cannot be created correctly from `environment.yml`, you can use the provided installation script. It works with conda, mamba or micromamba (it installs Miniconda if none is found):
 
 ```bash
-python3 install_srarec_env.py --system wsl --env_name srarec
+python3 install_srarec_env.py --system wsl --env-name srarec
 ```
 
 Use `--system linux`, `--system mac-intel` (also for Apple Silicon) or add `--manager micromamba` as needed. If you have problems installing the dependencies, contact us (see [Contact](#contact)).
