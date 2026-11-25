@@ -14,6 +14,8 @@ except ImportError as e:
     raise ImportError(
         "Missing dependency 'plotly'. Install it with:\n"
         "    pip install plotly\n"
+        "or recreate the environment (see the README). If you have problems installing the dependencies, "
+        "contact luisdaniel.gonzalez@uvigo.es or paula.iglesias.rivas@uvigo.gal\n"
     ) from e
 
 try:
