@@ -2235,7 +2235,7 @@ def pasos_comunes_slow_fast(srr, base_dir, refseq, work_dir, platform, layout, f
 
 def pasos_ravi(srr, base_dir, refseq, work_dir, platform, dedup_bam, modo, noindel=False):
 
-    print(f"Entered RAVI mode with noindel={noindel}")
+    print(f"Entered Bam mode with noindel={noindel}")
 
     output_bam = str(dedup_bam).replace(".bam", "_output.bam")
     intermediate_bam_0 = str(dedup_bam).replace(".bam", "_intermediate_0.bam")
@@ -2898,7 +2898,7 @@ def main():
 
         if args.bam:                     # start directly from BAM
             simulacion_folder = args.positional_args[0]
-            modo = "ravi"
+            modo = "bam"
             dedup_bam = f"{simulacion_folder}.bam"
             print(f"dedup_bam: {dedup_bam}")
             work_dir = base_dir / simulacion_folder
@@ -2911,7 +2911,7 @@ def main():
             # === Flow: trimming -> SPAdes+SHIVER -> RAVI ===
             # A) 3 positional args: <fastq1> <fastq2> <folder> (as before)
             # B) 1 positional SRR/ERR/DRR: download with prefetch+fasterq-dump into <folder>=<SRR>
-            modo = "ravi"
+            modo = "bam"
             print("Entered SHIVER assembly mode")
             if len(args.positional_args) >= 3:
                 fastq_1 = Path(args.positional_args[0])
@@ -2976,7 +2976,7 @@ def main():
                 )
 
             refseq_new = work_dir / f"{simulacion_folder}_ref.fasta"
-            print_substep(f"[SHIVER] BAM generated: {bam_out}; entering RAVI and mapping {bam_out} with {refseq_new}")
+            print_substep(f"[SHIVER] BAM generated: {bam_out}; entering Bam and mapping {bam_out} with {refseq_new}")
             ok = pasos_ravi(srr, base_dir, refseq_new, work_dir, args.platform, bam_out, modo, noindel=noindel_option)
 
         # if args.slow:
@@ -3008,7 +3008,7 @@ def main():
         if args.bam:
             # BAM flow
             simulacion_folder = args.positional_args[0] if len(args.positional_args) > 0 else srr
-            modo = "ravi"
+            modo = "bam"
             dedup_bam = f"{simulacion_folder}.bam"
             print(f"dedup_bam: {dedup_bam}")
             work_dir = base_dir / simulacion_folder
@@ -3021,7 +3021,7 @@ def main():
             # === trimming -> SPAdes + SHIVER -> RAVI ===
             print("Entered SHIVER assembly mode")
             # (your existing block: with <fastq1> <fastq2> <folder> or SRR)
-            modo = "ravi"
+            modo = "bam"
             if len(args.positional_args) >= 3:
                 fastq_1 = Path(args.positional_args[0])
                 fastq_2 = Path(args.positional_args[1])
@@ -3083,7 +3083,7 @@ def main():
                 )
 
             refseq_new = work_dir / f"{simulacion_folder}_ref.fasta"
-            print_substep(f"[SHIVER] BAM generated: {bam_out}; entering RAVI and mapping {bam_out} with {refseq_new}")
+            print_substep(f"[SHIVER] BAM generated: {bam_out}; entering Bam and mapping {bam_out} with {refseq_new}")
             ok = pasos_ravi(srr, base_dir, refseq_new, work_dir, args.platform, bam_out, modo, noindel=noindel_option)
         elif args.slow:
             # classic SLOW flow -> slow_comun(...)
