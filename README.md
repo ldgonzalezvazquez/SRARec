@@ -73,23 +73,26 @@ cd SRARec
 
 ### 2. Create the Conda environment
 
-**Recommended** — installs Python and dependencies:
+**Recommended** — installs Python and dependencies (with conda or micromamba):
 
 ```bash
 conda env create -f environment.yml
 conda activate srarec
+
+# or, with micromamba
+micromamba env create -f environment.yml
+micromamba activate srarec
 ```
 
-If the environment cannot be created correctly from `environment.yml`, you can use the provided installation script. This script creates the Conda environment and installs the required dependencies according to the selected operating system.
+On Apple Silicon (M1, M2, M3…) create the environment for `osx-64` (runs through Rosetta 2), because some Bioconda packages (`ngsngs`, `smalt`) have no `osx-arm64` build: prefix the command with `CONDA_SUBDIR=osx-64`.
+
+If the environment cannot be created correctly from `environment.yml`, you can use the provided installation script. It works with conda, mamba or micromamba (it installs Miniconda if none is found):
 
 ```bash
 python3 install_srarec_env.py --system wsl --env_name srarec
 ```
-After the installation is completed, activate the environment:
 
-```bash
-conda activate srarec
-```
+Use `--system linux`, `--system mac-intel` (also for Apple Silicon) or add `--manager micromamba` as needed. If you have problems installing the dependencies, contact us (see [Contact](#contact)).
 
 **Minimal** — Python only:
 
